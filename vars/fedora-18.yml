@@ -20,3 +20,4 @@ apache_log: /var/log/httpd/access_log
 apache_log_dir: /var/log/httpd
 php_conf_dir: /etc/php.d/
 php_module_dir: /usr/lib/php/modules
+sshd_service: sshd
