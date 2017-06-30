@@ -5,7 +5,7 @@
     - apache2
     - php{{ php_version }}
     - php{{ php_version }}-curl
-#    - php{{ php_version }}-sqlite
+    - php{{ php_version }}-sqlite
   tags:
     - download
   when: is_debian
