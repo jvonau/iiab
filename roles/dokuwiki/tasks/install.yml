@@ -1,14 +1,12 @@
 - name: Get the Dokuwiki software
-  get_url: url="{{ xsce_download_url }}/{{ dokuwiki_version }}"  dest={{ downloads_dir}}/
-  when: not {{ use_cache }} and not {{ no_network }}
-  tags:
-    - download2
+  get_url: url="{{ iiab_download_url }}/{{ dokuwiki_version }}.tgz"  dest={{ downloads_dir}}/
+  when: internet_available 
 
 - name: Copy it to permanent location /library
-  unarchive: src={{ downloads_dir}}/{{ dokuwiki_version }}  dest=/library
+  unarchive: src={{ downloads_dir }}/{{ dokuwiki_version }}.tgz  dest=/library creates=/library/{{ dokuwiki_version }}/VERSION
 
-- name: Rename /library/dokuwiki* to /library/dokuwiki
-  shell: if [ ! -d /library/dokuwiki ]; then mv /library/dokuwiki* /library/dokuwiki; fi
+- name: Symlink /library/dokuwiki* to /library/dokuwiki
+  shell: if [ ! -d /library/dokuwiki ]; then ln -sf /library/{{ dokuwiki_version }} /library/dokuwiki; fi
 
 - name: Install config file for dokuwiki in Apache
   template: src=dokuwiki.conf.j2 dest=/etc/{{ apache_config_dir }}/dokuwiki.conf
@@ -27,7 +25,7 @@
 
 
 - name: Change permissions on engine directory so apache can write
-  file: path=/library/dokuwiki owner={{ apache_data }} mode=0755 state=directory recurse=yes
+  file: path=/library/{{ dokuwiki_version }} owner={{ apache_user }} mode=0755 state=directory recurse=yes
 
 - name: Restart apache, so it picks up the new aliases
   service: name={{ apache_service }} state=restarted

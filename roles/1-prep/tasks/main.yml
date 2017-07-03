@@ -1,4 +1,4 @@
-- name: Set flag for fedora 18 
+- name: Set flag for fedora 18
   set_fact:
     is_F18: True
   when: ansible_distribution_release == "based on Fedora 18" or ansible_distribution_version == "18"
@@ -7,6 +7,31 @@
   package: name=uuid-runtime
            state=present
   when: is_debuntu
+
+- name: Test for UUID file 
+  stat: path=/etc/iiab/uuid
+  register: uuid_file
+
+- name: Create folder to hold uuid
+  file: path=/etc/iiab state=directory
+  when: not uuid_file.stat.exists
+
+- name: If no uuid exists, create one
+  shell: uuidgen
+  register: uuid_response
+  when: not uuid_file.stat.exists
+
+- name: Put the uuid in place
+  shell: echo {{ uuid_response.stdout_lines[0] }} > /etc/iiab/uuid
+  when: not uuid_file.stat.exists
+
+- name: get the uuid
+  command: cat /etc/iiab/uuid
+  register: stored_uuid
+
+- name: get the value into a variable
+  set_fact:
+      uuid={{ stored_uuid.stdout_lines[0] }}
 
 # for rpi, without rtc, we need time as soon as possible
 - name: Install chrony package
@@ -17,11 +42,15 @@
   tags:
     - download
 
-#TODO: Use regexp filter instead of hard-code ip 
+#TODO: Use regexp filter instead of hard-code ip
 - name: Update chrony config file
   template: backup=no
             dest=/etc/chrony.conf
             src=chrony.conf.j2
+
+- name: Disable apparmor -- on by default in ubuntu
+  service: name=apparmor enabled=False state=stopped
+  when: is_ubuntu
 
 - name: Disable selinux on next boot
   selinux: state=disabled
@@ -33,22 +62,22 @@
   when: selinux_disabled is defined and selinux_disabled.changed
 
 ##  DISCOVER PLATFORMS ######
-- name: Discover if this is a rpi -- if so it has a bcm2709 processor
-  set_fact: 
+- name: Discover if this is a rpi -- assume if so it is running raspbian
+  set_fact:
      rpi_model: "rpi"
      is_rpi: "True"
-  when:  ansible_cmdline["bcm2709.serial"]  is defined
+  when:  ansible_lsb["id"] == "Raspbian"
   ignore_errors: true
 
 - include: prep.yml
 
 # we need to inialize the ini file
-- include: xsce_ini.yml
+- include: iiab_ini.yml
 
 - include: computed_vars.yml
 
 - include: detected_network.yml
-  when: not installing 
+  when: not installing
 
 # Patch Fedora 21+ so usbmount works
 # Set flag to True that was initialized to False in role defaults
@@ -97,6 +126,6 @@
 
 - name: download the firmware for built in wifi on NUC6
   get_url: dest=/lib/firmware
-           url={{ xsce_download_url }}/iwlwifi-8000C-13.ucode
+           url={{ iiab_download_url }}/iwlwifi-8000C-13.ucode
   when:  usb_NUC6.stdout|int > 0
 

@@ -1,0 +1,41 @@
+#!/bin/bash
+OS=`grep ^ID= /etc/*elease|cut -d= -f2`
+OS=${OS//\"/}
+VERSION_ID=`grep VERSION_ID /etc/*elease | cut -d= -f2`
+VERSION_ID=${VERSION_ID//\"/}
+VERSION_ID=${VERSION_ID%%.*}
+OS_VER="$OS-$VERSION_ID"
+# get current version
+BRANCH=`git rev-parse --abbrev-ref HEAD`
+COMMIT=`git rev-parse --verify HEAD`
+
+if [ -d /usr/lib64/php ]
+then
+  PHPLIB_DIR=/usr/lib64/php
+else
+  if [ -d /usr/lib/php5 ]; then
+     PHPLIB_DIR=/usr/lib/php5
+  else
+     PHPLIB_DIR=/usr/lib/php
+  fi
+fi
+
+if [ -f /proc/device-tree/mfg-data/MN ]
+then
+  OS_VER="OLPC"
+  XO_VERSION=`cat /proc/device-tree/mfg-data/MN`
+else
+  XO_VERSION="none"
+fi
+
+ANSIBLE_VERSION=$(ansible --version|head -n 1|cut -f 2 -d " ")
+cat <<EOF
+{"phplib_dir"             : "$PHPLIB_DIR",
+"iiab_branch"             : "$BRANCH",
+"iiab_commit"             : "$COMMIT",
+"xo_model"                : "$XO_VERSION",
+"ansble_version"	  : "$ANSIBLE_VERSION",
+"os"                      : "$OS",
+"os_ver"                  : "$OS_VER"}
+
+EOF

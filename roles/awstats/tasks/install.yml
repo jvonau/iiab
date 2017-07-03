@@ -25,8 +25,8 @@
 - name: Create directory for awstat to use as intermediate summary storage
   file: path={{ item }}
         mode=0750
-        owner={{ apache_data }}
-        group={{ apache_data }}
+        owner={{ apache_user }}
+        group={{ apache_user }}
         state=directory
         force=true
   with_items:
@@ -58,7 +58,6 @@
   stat: path=/etc/awstats/awstats.conf
   register: awstats
 
-- debug: var=awstats
 
 - name: If there was a config file installed by package, move it aside
   command: mv /etc/awstats/awstats.conf /etc/awstats/awstats.conf.dist
