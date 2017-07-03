@@ -4,7 +4,7 @@ OS=${OS//\"/}
 VERSION_ID=`grep VERSION_ID /etc/*elease | cut -d= -f2`
 VERSION_ID=${VERSION_ID//\"/}
 VERSION_ID=${VERSION_ID%%.*}
-
+OS_VER="$OS-$VERSION_ID"
 # get current version
 BRANCH=`git rev-parse --abbrev-ref HEAD`
 COMMIT=`git rev-parse --verify HEAD`
@@ -22,6 +22,7 @@ fi
 
 if [ -f /proc/device-tree/mfg-data/MN ]
 then
+  OS_VER="OLPC"
   XO_VERSION=`cat /proc/device-tree/mfg-data/MN`
 else
   XO_VERSION="none"
@@ -35,6 +36,6 @@ cat <<EOF
 "xo_model"                : "$XO_VERSION",
 "ansble_version"	  : "$ANSIBLE_VERSION",
 "os"                      : "$OS",
-"os_ver"                  : "${OS}-$VERSION_ID"}
+"os_ver"                  : "$OS_VER"}
 
 EOF
