@@ -1,0 +1,21 @@
+# These entries should never be changed in this file.
+# These are defaults for boolean routines
+# Platforms - turn all off and let <OS>.yml turn on as appropriate
+is_rpi: False
+is_debian: False
+is_debuntu: False
+is_ubuntu: False
+is_redhat: False
+is_fedora: False
+is_centos: False
+is_olpc: False
+
+# These entries should never be changed in this file.
+# These are defaults for boolean routines,
+gui_port: 80
+gw_active: False
+internet_available: False
+
+strict_install: False
+nodocs: False
+installing: False
