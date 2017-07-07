@@ -19,9 +19,11 @@ is_F23: False
 is_F24: False
 
 # These entries should never be changed in this file.
+# These are defaults for boolean routines,
 gui_port: 80
 gw_active: False
 internet_available: False
-disregard_network: False
+
+strict_install: False
 nodocs: False
 installing: False
