@@ -24,42 +24,27 @@
     - mod_xsendfile
   when: not is_debuntu
 
-- name: Install latest MarkupSafe
-  pip: name=MarkupSafe
-       state=latest
-       virtualenv={{ osm_venv }}
-       virtualenv_site_packages=no
-  when: internet_available 
-
-- name: Install latest pytz
-  pip: name=pytz
-       state=latest
-       virtualenv={{ osm_venv }}
-       virtualenv_site_packages=no
-  when: internet_available 
-
-- name: install IIAB with pip
-  pip: name=Internet-in-a-Box
-       state=latest
-       virtualenv={{ osm_venv }}
-       virtualenv_site_packages=no
-  when: internet_available 
-
-# Patch the Whoosh dependency to downgrade to 2.6
-# JV this is the major issue
-- name: remove Whoosh with pip
+# IIAB wants a specific version do that first
+- name: Install Whoosh 2.6
   pip: name=whoosh
        virtualenv={{ osm_venv }}
-       state=absent
-
-- name: Install Whoosh 2.6 with pip
-  pip: name=whoosh
+       virtualenv_site_packages=no
        version=2.6
-       state=present
-       virtualenv={{ osm_venv }}
-       virtualenv_site_packages=no
+       extra_args="--disable-pip-version-check"
   when: internet_available 
 
+- name: Install IIAB with dependencies
+  pip: name={{ item }}
+       virtualenv={{ osm_venv }}
+       virtualenv_site_packages=no
+       extra_args="--disable-pip-version-check"
+  with_items:
+    - MarkupSafe
+    - pytz
+    - Internet-in-a-Box
+  when: internet_available 
+
+# python_path c/b or with osm_venv in os.yml
 - name: Redhat - Get the path for python
   set_fact: python_path={{ osm_venv }}/lib/python2.7/site-packages/iiab
   when: is_redhat
@@ -68,7 +53,6 @@
   set_fact: python_path={{ osm_venv }}/lib/python2.7/dist-packages/iiab
   when: is_debuntu
 
-# JV should this be {{ apache_user }} for group?
 - name: All - Copy IIAB config file
   template: backup=no
             src=osm.conf.j2
