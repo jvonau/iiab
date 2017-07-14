@@ -12,4 +12,5 @@
       - { role: 1-prep, tags: ['platform','base'] }
       - { role: 2-common, tags: ['common','base'] }
       - { role: 3-base-server, tags: ['base'] }
-      - { role: openvpn, tags: ['openvpn'] }
+      - { role: 4-server-options, tags: ['options'] }
+
