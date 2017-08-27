@@ -68,12 +68,13 @@
   service: name=postgresql
            state=stopped
            enabled=no
+  when: not installing
 
 - name: Start and enable postgresql-iiab service
   service: name=postgresql-iiab
            state=started
            enabled=yes
-  when: postgresql_enabled
+  when: postgresql_enabled and not installing
 
 - name: Add postgresql to service list
   ini_file: dest='{{ service_filelist }}'

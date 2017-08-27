@@ -59,6 +59,7 @@
     - name: Start the MySQL service
       service: name={{ mysql_service }}
                state=started
+      when: not installing
 
     - name: Enable the MySQL service
       service: name={{ mysql_service }}
@@ -118,4 +119,3 @@
               value: '"mySQL is a widely used database service on the Internet which runs on many platforms, and is often offered and available at hosting Internet Service Providers"'
             - option: enabled
               value: "{{ mysql_enabled }}"
-
