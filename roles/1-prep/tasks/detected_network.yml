@@ -82,7 +82,8 @@
 - name: setting wan_in_interfaces
   set_fact:
     wan_in_interfaces: True
-  when: is_debuntu and  wan_file.stdout|int >= "0"
+  when: is_debuntu and wan_file.stdout|int >= "0"
+  register: wan_file
 
 # WIRELESS -- if any wireless is detected as gateway, it becomes WAN
 - name: Look for any wireless interfaces
@@ -243,3 +244,7 @@
     value: '{{ discovered_lan_iface }}'
   - option: 'gui_static_wan'
     value: '{{ gui_static_wan }}'
+  - option: 'wan_in_interfaces'
+    value: '{{ wan_in_interfaces }}'
+  - option: 'dhcpcd_result'
+    value: '{{ dhcpcd_result }}'
