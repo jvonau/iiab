@@ -1,8 +1,8 @@
 #!/bin/bash
-
-# copy var files to /etc/iiab for subsequent use
-mkdir -p /etc/iiab
-if [ ! -f /etc/iiab/config_vars.yml ]; then
+# first run setup
+if [ ! -f /etc/iiab/iiab.ini ]; then
+  mkdir -p /etc/iiab
+  touch /etc/iiab/iiab.ini
   echo "{}" > /etc/iiab/config_vars.yml
 fi
 
@@ -56,7 +56,24 @@ fi
 if [ ! -f /etc/ansible/facts.d/local_facts.fact ]; then
    mkdir -p /etc/ansible/facts.d
 fi
+# end first run setup
+
 cp ./scripts/local_facts.fact /etc/ansible/facts.d/local_facts.fact
+
+# raspbian-9 changes network interface names to include mac address
+# which defeats copying an image from one SD card to another
+raspbian_ver=`./scripts/local_facts.fact|grep os_ver|awk -F '"' '{print $4}'`
+if [ "$raspbian_ver" == "raspbian-9" ]; then
+   grep net.ifnames=0 /boot/cmdline.txt
+   if [ $? -ne 0 ]; then
+       sed -i -r 's/deadline +fsck/deadline net.ifnames=0 fsck/' /boot/cmdline.txt
+       echo
+       echo "Kernel cmdline changed. Will now reboot so that network interface names will"
+       echo "  be same for all raspberry pi\'s. Hit enter, and then restart this script"
+       read var
+       reboot
+   fi
+fi
 
 PLAYBOOK="iiab.yml"
 INVENTORY="ansible_hosts"
