@@ -9,6 +9,36 @@
   tags:
     - download
 
+- name: get the uuidgen program
+  package: name=uuid-runtime
+           state=present
+  when: is_debuntu
+
+- name: Test for UUID file
+  stat: path=/etc/iiab/uuid
+  register: uuid_file
+
+- name: Create folder to hold uuid
+  file: path=/etc/iiab state=directory
+  when: not uuid_file.stat.exists
+
+- name: If no uuid exists, create one
+  shell: uuidgen
+  register: uuid_response
+  when: not uuid_file.stat.exists
+
+- name: Put the uuid in place
+  shell: echo {{ uuid_response.stdout_lines[0] }} > /etc/iiab/uuid
+  when: not uuid_file.stat.exists
+
+- name: get the uuid
+  command: cat /etc/iiab/uuid
+  register: stored_uuid
+
+- name: get the value into a variable
+  set_fact:
+      uuid={{ stored_uuid.stdout_lines[0] }}
+
 - name: Create the directory for keys
   file: dest=/etc/openvpn/keys
         state=directory
@@ -87,7 +117,6 @@
   when:
             not openvpn_enabled or not openvpn_cron_enabled
 
-
 - name:    stop starting the openvpn tunnel at boot time
   shell:   systemctl disable openvpn@xscenet.service
   when:    not openvpn_enabled and not is_debuntu
@@ -119,3 +148,5 @@
       value: "{{ openvpn_enabled }}"
     - option: cron_enabled
       value: "{{ openvpn_cron_enabled }}"
+    - option: 'Universal Unique ID (uuid)'
+      value: '{{ uuid }}'
