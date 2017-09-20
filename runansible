@@ -1,6 +1,27 @@
 #!/bin/bash -e
 # ./scripts/ansible
 # copy var files to /etc/iiab for subsequent use
+OS=`grep ^ID= /etc/*release|cut -d= -f2`
+OS=${OS//\"/}
+PLAYBOOK="iiab.yml"
+INVENTORY="ansible_hosts"
+# APPLY TEMPORARY PATCH
+# https://github.com/ansible/ansible/pull/20202
+# https://github.com/iiab/iiab/issues/249
+if [ ! -f /etc/iiab/config_vars.yml ]; then
+    mkdir -p /etc/iiab
+    echo "Patching..."
+    sed -i 's/StrictVersion/LooseVersion/g' /usr/lib/python2.7/dist-packages/ansible/modules/core/web_infrastructure/htpasswd.py
+fi
+if [ -f /etc/iiab/iiab.env ]
+then
+  . /etc/iiab/iiab.env
+  cd $XSCE_DIR
+else
+  XSCE_DIR=/opt/iiab/iiab
+fi
+# cloned to /opt/iiab/iiab
+CWD=`pwd`
 # if vars/local_vars.yml is missing, put a default one in place
 if [ ! -f ./vars/local_vars.yml ]; then
     case $OS in
