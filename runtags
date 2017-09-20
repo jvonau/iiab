@@ -26,7 +26,7 @@ found="N"
 
 for tag in $tags
 do
-  if [ "$tag" == "prep" ]
+  if [ "$tag" == "netvars" ]
   then
     found="Y"
   fi
@@ -39,7 +39,7 @@ taglist=$1
 
 if [ "$found" == "N" ]
 then
-  taglist="prep,"$taglist
+  taglist="netvars,"$taglist
 fi
 
 # script to run a specific tag in the current playbook
