@@ -3,7 +3,6 @@ OS=`grep ^ID= /etc/*release|cut -d= -f2`
 OS=${OS//\"/}
 PLAYBOOK="iiab.yml"
 INVENTORY="ansible_hosts"
-
 # APPLY TEMPORARY PATCH
 # https://github.com/ansible/ansible/pull/20202
 # https://github.com/iiab/iiab/issues/249
@@ -21,7 +20,6 @@ else
 fi
 # cloned to /opt/iiab/iiab
 CWD=`pwd`
-
 # if vars/local_vars.yml is missing, put a default one in place
 if [ ! -f ./vars/local_vars.yml ]; then
     case $OS in
