@@ -6,7 +6,7 @@
 # might need an exclude for F18 here
 - name: Now disconnect bridge slaves
   shell: nmcli c delete id "System {{ item|trim }}"
-  ignore_errors: True
+  ignore_errors: true
   when: item|trim != iiab_wireless_lan_iface
   with_items:
     - "{{ ifcfg_slaves.stdout_lines }}"
@@ -14,12 +14,14 @@
 # clear all bridge ifcfg files
 - name: Now delete slave bridge ifcfg files
   shell: rm -f /etc/sysconfig/network-scripts/ifcfg-"{{ item }}"
+  ignore_errors: true
   when: num_lan_interfaces != "0" or iiab_wireless_lan_iface != "none"
   with_items:
     - "{{ ifcfg_slaves.stdout_lines }}"
 
 - name: Now delete original ifcfg files
   shell: rm -f /etc/sysconfig/network-scripts/ifcfg-"{{ item }}"
+  ignore_errors: true
   when: num_lan_interfaces == "1" and iiab_lan_iface != "br0"
   with_items:
     - "{{ discovered_lan_iface }}"
