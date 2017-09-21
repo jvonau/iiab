@@ -49,19 +49,20 @@
 # could use something else
 - name: Find wifi gateway config if present - Can Fail
   shell: egrep -rn ESSID /etc/sysconfig/network-scripts/ifcfg* | gawk -F ':' '{print $1}' | gawk -F '/' '{print $5}'
-  register: ifcfg_WAN_wifi
   ignore_errors: True
+  register: ifcfg_WAN_wifi
 
 #returns file name
-- name: Setting has_wifi_gw based on ESSID if found
+- name: Setting has_wifi_gw based on ESSID if found - Can Fail
   set_fact:
     has_wifi_gw: "{{ item|trim }}"
   when: ifcfg_WAN_wifi.changed and item|trim != ""
   with_items:
       - "{{ ifcfg_WAN_wifi.stdout_lines }}"
 
-- name: Finding device for wifi AP gateway
+- name: Finding device for wifi AP gateway - Can Fail
   shell: egrep -rn DEVICE /etc/sysconfig/network-scripts/{{ has_wifi_gw }} |  gawk -F '=' '{print $2}'
+  ignore_errors: True
   register: AP_device
   when: has_wifi_gw != "none" and has_ifcfg_gw != "none"
 
