@@ -14,9 +14,10 @@ if [ -f /etc/iiab/config_vars.yml ]; then
         echo "Entering upgrade mode"
         # do stuff here - git pull, delete?
     else
-    echo "'runansible' has alreay been completed"
-    echo "Exiting."
-    exit 1
+        echo "'runansible' has alreay been completed"
+        echo "use --debug to override "
+        echo "Exiting."
+        exit 1
     fi
 fi
 # APPLY TEMPORARY PATCH
