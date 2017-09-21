@@ -7,6 +7,7 @@ if [ -f /etc/iiab/config_vars.yml ]; then
         echo "Entering debug mode"
     else
         echo "'runansible' has alreay been completed"
+        echo "use --debug to override "
         echo "Exiting."
         exit 1
     fi
