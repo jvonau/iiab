@@ -46,6 +46,9 @@
   set_fact:
       uuid={{ stored_uuid.stdout_lines[0] }}
 
+# we need to inialize the ini file
+- include: iiab_ini.yml
+
 # for rpi, without rtc, we need time as soon as possible
 - name: Install chrony package
   package: name={{ item }}
@@ -84,11 +87,6 @@
   ignore_errors: true
 
 - include: prep.yml
-
-- include: computed_vars.yml
-
-- include: detected_network.yml
-  when: not installing
 
 # Patch Fedora 21+ so usbmount works
 # Set flag to True that was initialized to False in role defaults
