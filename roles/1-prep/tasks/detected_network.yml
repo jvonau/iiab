@@ -29,7 +29,7 @@
   when: 'ansible_default_ipv4.gateway is defined'
 
 - name: Verify gateway present
-  shell: ping -c2 "{{ ansible_default_ipv4.gateway }}" &> /dev/null ; echo $?
+  shell: ping -c4 "{{ ansible_default_ipv4.gateway }}" &> /dev/null ; echo $?
   register: gw_active_test
   when: discovered_wan_iface != "none"
 
