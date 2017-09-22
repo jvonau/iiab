@@ -71,6 +71,7 @@
   ignore_errors: true
 
 - include: prep.yml
+  when: first_run
 
 # Put conditional actions for hardware platforms here
 - include: raspberry_pi_2.yml
