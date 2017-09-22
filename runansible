@@ -72,7 +72,7 @@ else
  ARGS=""
 fi
 
-export ANSIBLE_LOG_PATH="$XSCE_DIR/iiab-install.log"
+export ANSIBLE_LOG_PATH="$CWD/iiab-install.log"
 ansible -m setup -i $INVENTORY localhost --connection=local >> /dev/null
 
 ansible-playbook -i $INVENTORY $PLAYBOOK ${ARGS} --connection=local
