@@ -1,3 +1,6 @@
+- include: detected_network.yml
+  when: not installing
+
 # start hostname setup
 - name: Set hostname
   template: dest=/etc/hostname
