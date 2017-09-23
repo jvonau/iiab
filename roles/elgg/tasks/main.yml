@@ -1,5 +1,6 @@
 - name: download current version from our copy
   shell: wget {{ iiab_download_url }}/elgg-{{ elgg_version }}.zip -c -P {{ downloads_dir }}
+  creates={{ downloads_dir }}/elgg-{{ elgg_version }}.zip
   when: internet_available 
 
 - name: Determine if software is already expanded
@@ -17,6 +18,7 @@
 - name: change ownership
   file: path=/opt/elgg-{{elgg_version }}
         owner={{ apache_user }}
+        group={{ apache_user }}
         recurse=yes
         state=directory
 
@@ -60,10 +62,10 @@
         dest="/opt/{{ elgg_xx }}/.htaccess"
         mode=0644
         owner={{ apache_user }}
-        group=root
+        group={{ apache_user }}
 
 - name: Modify .htaccess to have RewriteBase as our directory
-  lineinfile: backup=yes
+  lineinfile: backup=no
               dest="/opt/{{ elgg_xx }}/.htaccess"
               state=present
               insertafter='^#RewriteBase'
