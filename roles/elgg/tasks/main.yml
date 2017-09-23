@@ -23,7 +23,8 @@
         state=link
         force=true
 
-#- use template to fix up settings in engine/settings.php with our variables substituted into engine/settings.example.php
+# use template to fix up settings in engine/settings.php with our variables substituted
+# into engine/settings.example.php
 - name: Substitute our parameters in engine/settings.example.php
   template: src="settings.php.j2"
             dest="/opt/{{ elgg_xx }}/elgg-config/settings.php"
@@ -60,6 +61,17 @@
         state=directory
 
 # elggdb.sql obtained with mysqldump --skip-add-drop-table elggdb > elggdb.sql
+# tar up a mysqldump of freshly installed database and use it in the install to avoid the startup
+# form, which worries me a lot. (/var/lib/mysql/elggdb)
+
+- name: Create a user to access the elgg database
+  mysql_user: name={{ dbuser }} host={{ item }} password={{ dbpassword }} priv=*.*:ALL
+  with_items:
+        - 127.0.0.1
+        - ::1
+        - localhost
+  when: mysql_enabled and elgg_enabled and not elgg.stat.exists
+
 - name: Create file to load database
   template: src=elggdb.sql.j2
             dest=/tmp/elggdb.sql
@@ -77,17 +89,6 @@
 
 - name: Remove database dump after load
   file: name=/tmp/elggdb.sql state=absent
-
-- name: Create a user to access the elgg database
-  mysql_user: name={{ dbuser }} host={{ item }} password={{ dbpassword }} priv=*.*:ALL
-  with_items:
-        - 127.0.0.1
-        - ::1
-        - localhost
-  when: mysql_enabled and elgg_enabled
-
-
-#- tar up a mysqldump of freshly installed database and use it in the install to avoid the startup form, which worries me a lot. (/var/lib/mysql/elggdb)
 
 - name: Install config file for elgg in Apache
   template: src=elgg.conf dest=/etc/{{ apache_config_dir }}/elgg.conf
