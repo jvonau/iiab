@@ -1,6 +1,10 @@
-- name: Disable stock dhcp_service service
-  service: name={{ dhcp_service }}
-           enabled=no
+#- name: Disable stock dhcp_service service
+#  service: name={{ dhcp_service }}
+#           enabled=no
+#  when: dhcpd_install and first_run and is_debian_9
+
+- name: reload systemd for new deamon config files 
+  shell: systemctl daemon-reload
   when: dhcpd_install and first_run and is_debian_9
 
 - name: Disable dhcpd service
@@ -12,7 +16,7 @@
 - name: Enable dhcpd service
   service: name=dhcpd
            enabled=yes
-  when: dhcpd_enabled and dhcpd_install
+  when: dhcpd_enabled and dhcpd_install and (not first_run and is_debian_9)
 
 - name: Copy /etc/sysconfig/dhcpd file
   template: src={{ item.src }}
