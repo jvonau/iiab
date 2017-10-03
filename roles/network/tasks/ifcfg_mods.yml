@@ -43,8 +43,8 @@
 
 # create ifcfg-WAN if missing
 # if we get here we have gateway but no ifcfg file
-- include: create_ifcfg.yml
-  when: iiab_wan_iface != "none" and not has_WAN and has_ifcfg_gw == "none" and xo_model == "none" and not iiab_demo_mode
+#- include: create_ifcfg.yml
+#  when: iiab_wan_iface != "none" and not has_WAN and has_ifcfg_gw == "none" and xo_model == "none" and not iiab_demo_mode
 
 - name: Configuring LAN interface as iiab_lan_iface
   template: src=network/ifcfg.j2
