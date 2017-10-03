@@ -3,24 +3,26 @@
            state=stopped
   when: iiab_wireless_lan_iface != "none"
 
-# might need an exclude for F18 here
+# might need an exclude for F18 here - Can Fail
 - name: Now disconnect bridge slaves
   shell: nmcli c delete id "System {{ item|trim }}"
+  when: not first_run and item|trim != iiab_wireless_lan_iface
   ignore_errors: True
-  when: item|trim != iiab_wireless_lan_iface
   with_items:
     - "{{ ifcfg_slaves.stdout_lines }}"
 
-# clear all bridge ifcfg files
+# clear all bridge ifcfg files - Can Fail
 - name: Now delete slave bridge ifcfg files
   shell: rm -f /etc/sysconfig/network-scripts/ifcfg-"{{ item }}"
-  when: num_lan_interfaces != "0" or iiab_wireless_lan_iface != "none"
+  when: not first_run and (num_lan_interfaces != "0" or iiab_wireless_lan_iface != "none")
+  ignore_errors: True
   with_items:
     - "{{ ifcfg_slaves.stdout_lines }}"
 
-- name: Now delete original ifcfg files
+- name: Now delete original ifcfg files - Can Fail
   shell: rm -f /etc/sysconfig/network-scripts/ifcfg-"{{ item }}"
   when: num_lan_interfaces == "1" and iiab_lan_iface != "br0"
+  ignore_errors: True
   with_items:
     - "{{ discovered_lan_iface }}"
 
@@ -28,7 +30,7 @@
   shell: nmcli con delete id iiab-LAN
   ignore_errors: True
   changed_when: False
-  when: (num_lan_interfaces != "0" or iiab_wireless_lan_iface != "none")
+  when: not first_run and (num_lan_interfaces != "0" or iiab_wireless_lan_iface != "none")
 
 ## vars/ users should set user_wan_iface to avoid messy redetect
 - include: redetect.yml
