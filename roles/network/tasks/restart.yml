@@ -11,7 +11,7 @@
 
 - name: Start named service
   service: name={{ dns_service }}
-           state=started
+           state=restarted
   ignore_errors: True
   when: named_enabled
   register: dns_started
