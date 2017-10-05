@@ -1,4 +1,5 @@
 dependencies:
+    - { role: home-page, tags: ['home-page'] }
     - { role: sshd, tags: ['services','sshd','base'] }
     - { role: openvpn, tags: ['options','openvpn'], when: openvpn_install }
     - { role: network, tags: ['services','base','network'] }
