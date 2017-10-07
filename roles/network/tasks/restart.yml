@@ -37,10 +37,10 @@
            state=started
   when: squid_enabled and squid_install
 
-#- name: Restart wondershaper service
-#  service: name=wondershaper
-#            state=restarted
-#  when: wondershaper_enabled
+- name: Restart wondershaper service
+  service: name=wondershaper
+            state=restarted
+  when: wondershaper_enabled
 
 - name: Restart avahi service
   service: name=avahi-daemon
