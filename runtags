@@ -9,7 +9,7 @@
 if [ -f /etc/iiab/iiab.env ]
 then
   . /etc/iiab/iiab.env
-  cd $XSCE_DIR
+#  cd $XSCE_DIR
 fi
 
 if [ ! -f iiab.yml ]

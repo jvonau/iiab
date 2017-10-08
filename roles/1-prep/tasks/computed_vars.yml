@@ -14,6 +14,15 @@
      exFAT_enabled: True
   when: xo_model != "none"
 
+- name: no prior domain name
+  set_fact:
+    iiab_domain: "{{ iiab_domain }}"
+  when: first_run
+
+# Now check FQDN
+- include: roles/2-common/tasks/hostname.yml
+  when: not first_run and {{ iiab_hostname }}.{{ iiab_domain }} != {{ ansible_fqdn }}
+
 - name: add version section
   ini_file: dest='{{ iiab_config_file }}'
             section=runtime
