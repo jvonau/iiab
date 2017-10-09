@@ -8,3 +8,4 @@ dependencies:
     - { role: ejabberd, tags: ['generic','ejabberd'], when: ejabberd_install }
     - { role: kalite, tags: ['kalite','edu-apps'], when: kalite_install }
     - { role: kiwix, tags: ['kiwix','edu-apps'], when: kiwix_install }
+    - { role: dokuwiki, tags: ['generic','dokuwiki'], when: dokuwiki_install }
