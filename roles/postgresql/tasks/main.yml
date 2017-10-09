@@ -18,6 +18,16 @@
   tags:
     - download
 
+- name: Stop postgresql service
+  command: "/etc/init.d/postgresql stop"
+  ignore_errors: True
+  when: is_debuntu
+
+- name: Stop and disable stock postgresql service
+  service: name=postgresql
+           state=stopped
+           enabled=no
+
 - name: Create postgresql-iiab systemd service
   template: src=postgresql-iiab.service
             dest=/etc/systemd/system/postgresql-iiab.service
@@ -64,14 +74,9 @@
             group=postgres
             mode=0640
 
-- name: Stop and disable stock postgresql service
-  service: name=postgresql
-           state=stopped
-           enabled=no
-
 - name: Start and enable postgresql-iiab service
   service: name=postgresql-iiab
-           state=started
+           state=restarted
            enabled=yes
   when: postgresql_enabled
 
