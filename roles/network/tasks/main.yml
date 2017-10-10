@@ -24,11 +24,13 @@
   tags:
     - named
     - network
+    - domain
 
 - include: dhcpd.yml
   tags:
     - dhcpd
     - network
+    - domain
 
 - include: squid.yml
   tags:

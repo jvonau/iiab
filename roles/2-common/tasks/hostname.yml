@@ -1,13 +1,5 @@
-# start hostname setup
-#- name: Set hostname
-#  template: dest=/etc/hostname
-#            src=roles/network/templates/network/hostname.j2
-#            owner=root
-#            mode=0644
-
-# should replace the above step
 - name: turn the crank for systemd
-  shell: hostnamectl set-hostname "iiab_hostname.iiab_domain"
+  shell: hostnamectl set-hostname "{{ iiab_hostname }}.{{ iiab_domain }}"
   when: is_debuntu
 
 - name: Configure /etc/sysconfig/network
@@ -17,12 +9,3 @@
             group=root
             mode=0644
   when: is_redhat
-
-# to go away...
-#- name: Create iiab_domain_name flag
-#  template: src=roles/network/templates/network/{{ item }}.j2
-#            dest=/etc/sysconfig/{{ item }}
-#            mode=0644
-#  with_items:
-#    - iiab_domain_name
-#  register: domainname
