@@ -83,9 +83,8 @@
       value:  '{{ internet_available }}'
 
 # Put all computed vars here so derive properly from any prior var file
-- name: If the TZ is not set in env, set it to UTC
-  set_fact: local_tz='UTC'
-  when: local_tz == ""
+- include: roles/2-common/tasks/tz.yml
+  when: not first_run
 
 - name: Set port 80 for Admin Console
   set_fact:
