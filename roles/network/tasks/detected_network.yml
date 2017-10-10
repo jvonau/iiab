@@ -1,14 +1,3 @@
-- name: Checking iiab_domain_name
-  shell: "cat /etc/sysconfig/iiab_domain_name"
-  when: not first_run
-  register: prior_domain
-
-# above always registers
-- name: Checking for prior domain name
-  set_fact:
-    iiab_domain: "{{ prior_domain.stdout }}"
-  when: not first_run and prior_domain.stdout != "lan" and prior_domain.stdout != ""
-
 - name: iiab_wan_device
   shell: "cat /etc/sysconfig/iiab_wan_device"
   when: not first_run
@@ -30,8 +19,14 @@
   include: detected_redhat.yml
   when: is_redhat
 
+<<<<<<< HEAD:roles/network/tasks/detected_network.yml
 - name: check to see if dhcpcd is installed and active - Can Fail
   shell: systemctl is-enabled dhcpcd
+=======
+- name: check to see if dhcpcd is installed and active
+  shell: systemctl is-enabled dhcpcd
+  when: is_debuntu
+>>>>>>> avoid_1-prep:roles/network/tasks/detected_network.yml
   register: dhcpcd_test
   ignore_errors: True
 
