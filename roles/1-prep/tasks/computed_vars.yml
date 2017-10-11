@@ -21,7 +21,7 @@
 
 # Now check FQDN
 - include: roles/2-common/tasks/hostname.yml
-  when: not first_run and {{ iiab_hostname }}.{{ iiab_domain }} != {{ ansible_fqdn }}
+  when: not first_run and iiab_hostname.iiab_domain != ansible_fqdn
 
 # Discover  do we have a gateway? -- if ansible detects gateway, becomes WAN candidate
 - name: Finding gateway
