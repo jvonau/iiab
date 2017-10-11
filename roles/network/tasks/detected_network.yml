@@ -19,14 +19,9 @@
   include: detected_redhat.yml
   when: is_redhat
 
-<<<<<<< HEAD:roles/network/tasks/detected_network.yml
 - name: check to see if dhcpcd is installed and active - Can Fail
   shell: systemctl is-enabled dhcpcd
-=======
-- name: check to see if dhcpcd is installed and active
-  shell: systemctl is-enabled dhcpcd
   when: is_debuntu
->>>>>>> avoid_1-prep:roles/network/tasks/detected_network.yml
   register: dhcpcd_test
   ignore_errors: True
 
