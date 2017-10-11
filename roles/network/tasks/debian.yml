@@ -40,11 +40,6 @@
   register: interface
   when: iiab_lan_iface == "br0" or wan_ip != "dhcp"
 
-- name: start up the dhcpcd service
-  service: name=dhcpcd
-           enabled=True
-           state=started
-
 - name: If this was a change, things need to shift
   service: name=hostapd state=stopped
   when: interface.changed
