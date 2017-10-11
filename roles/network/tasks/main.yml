@@ -18,10 +18,7 @@
 - include: hosts.yml
   tags:
     - network
-<<<<<<< HEAD
-=======
     - hostname
->>>>>>> avoid_1-prep
     - domain
 
 ##### end hostname setup
@@ -30,17 +27,12 @@
 - include: installing.yml
   tags:
     - network
-<<<<<<< HEAD
     - named
     - dhcpd
     - dnsmasq
     - squid
     - domain
 #  when: hostname_change.changed or installing
-
-=======
-    - domain
->>>>>>> avoid_1-prep
 
 - include: avahi.yml
   tags:
