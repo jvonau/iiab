@@ -1,5 +1,5 @@
 - name: iiab_wan_device
-  shell: "cat /etc/sysconfig/iiab_wan_device"
+  shell: grep IIAB_WAN_DEVICE /etc/iiab/iiab.env | awk -F "=" '{print $2}'
   when: not first_run
   register: prior_gw
 
