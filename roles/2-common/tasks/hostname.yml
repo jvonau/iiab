@@ -9,4 +9,3 @@
             group=root
             mode=0644
   when: is_redhat
-# might need NM restart or hostname to become active in memory
