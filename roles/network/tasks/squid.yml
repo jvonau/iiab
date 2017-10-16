@@ -64,7 +64,7 @@
         mode=0750
         state=directory
 
-- include: dansguardian.yml
+- include: roles/network/tasks/dansguardian.yml
   when: dansguardian_install
 
 #- name: Stop Squid

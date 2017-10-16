@@ -25,6 +25,7 @@
 ##### start install portion
 # only needs to be done once
 - include: installing.yml
+  when: not first_run and FQDN_changed
   tags:
     - network
     - named
