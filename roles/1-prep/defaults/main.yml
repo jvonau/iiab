@@ -4,6 +4,7 @@ gui_version: 2
 
 # These entries should never be changed in this file.
 # These are defaults for boolean routines, 
+FQDN_changed: False
 first_run: False
 installing: False
 NUC6_firmware_needed: False
