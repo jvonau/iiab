@@ -25,7 +25,6 @@
 ##### start install portion
 # only needs to be done once
 - include: installing.yml
-  when: not first_run and FQDN_changed
   tags:
     - network
     - named
@@ -34,6 +33,7 @@
     - squid
     - domain
 #  when: hostname_change.changed or installing
+#  when: not first_run and FQDN_changed
 
 - include: avahi.yml
   tags:
