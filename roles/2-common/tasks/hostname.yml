@@ -1,6 +1,6 @@
 - name: turn the crank for systemd
   shell: hostnamectl set-hostname "{{ iiab_hostname }}.{{ iiab_domain }}"
-  when: is_debuntu
+#  when: is_debuntu
 
 - name: Configure /etc/sysconfig/network
   template: src=roles/network/templates/network/sysconfig.network.j2
