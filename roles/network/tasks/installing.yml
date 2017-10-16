@@ -1,34 +1,35 @@
 # only needs to be done once
-- include: named.yml
+- include: roles/network/tasks/named.yml
+  when: named_install
   tags:
     - named
     - network
-  when: named_install
 
-- include: dhcpd.yml
+- include: roles/network/tasks/dhcpd.yml
+  when: dhcpd_install
   tags:
     - dhcpd
     - network
-  when: dhcpd_install
 
-- include: dnsmasq.yml
+- include: roles/network/tasks/dnsmasq.yml
+  when: dnsmasq_install
   tags:
     - dnsmasq
     - network
-  when: dnsmasq_install
 
-- include: squid.yml
+- include: roles/network/tasks/squid.yml
+  when: squid_install
   tags:
     - squid
     - network
-  when: squid_install
 
-- include: wondershaper.yml
+- include: roles/network/tasks/wondershaper.yml
+  when: wondershaper_install
   tags:
     - wondershaper
     - network
 
-- include: iptables.yml
+- include: roles/network/tasks/iptables.yml
   tags:
     - iptables
     - network
