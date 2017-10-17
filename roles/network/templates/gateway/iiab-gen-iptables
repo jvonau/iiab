@@ -120,7 +120,7 @@ if [ "$captive_portal_enabled" == "True" ];then
    $IPTABLES -t mangle -A internet -j MARK --set-mark 99
    $IPTABLES -t nat -A PREROUTING -i {{ iiab_lan_iface }} -p tcp -m mark --mark 99 -m tcp --dport 80 -j DNAT --to-destination {{ lan_ip }}
 
-elif [ -f /etc/sysconfig/xs_httpcache_on ]; then
+elif [ "$HTTPCACHE_ON" == "True" ]; then
     $IPTABLES  -t nat  -A PREROUTING -i $lan -p tcp --dport 80 ! -d 172.18.96.1 -j DNAT --to 172.18.96.1:3128
 fi
 
