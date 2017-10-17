@@ -46,7 +46,7 @@
             mode=0644
             backup=no
 
-- include: net_mods.yml
-  when: not is_debuntu and not is_F18
+#- include: net_mods.yml
+#  when: not is_debuntu and not is_F18
 
 - include: udev.yml
