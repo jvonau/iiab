@@ -65,9 +65,9 @@
   service: name=dhcpcd state=restarted
   when: interface.changed and dhcpcd_result == "enabled"
 
-- name: restart the networking service
-  service: name=networking state=restarted
-  when: interface.changed
+#- name: restart the networking service
+#  service: name=networking state=restarted
+#  when: interface.changed
   
 - name: restart hostapd when wifi is present
   service: name=hostapd state=started
