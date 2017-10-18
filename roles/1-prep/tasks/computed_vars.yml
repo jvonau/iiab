@@ -17,6 +17,7 @@
 - name: set FQDN
   set_fact:
     iiab_fqdn: "{{ iiab_hostname }}.{{ iiab_domain }}"
+    FQDN_changed: False
 
 - name: FQDN changed
   set_fact:
