@@ -82,11 +82,11 @@
 # we decided to enable mysql unconditionally
 #  when: elgg_enabled or rachel_enabled or owncloud_enabled or phpmyadmin_enabled or wordpress_enabled or iiab_menu_install
 
-- name: Turn on mongodb if sugarizer enabled
-  set_fact:
-    mongodb_install: True
-    mongodb_enabled: True
-  when: sugarizer_enabled
+#- name: Turn on mongodb if sugarizer enabled
+#  set_fact:
+#    mongodb_install: True
+#    mongodb_enabled: True
+#  when: sugarizer_enabled
 
 # There might be other db's
 - name: Turn on postgresql if moodle or pathagar enabled
@@ -95,11 +95,11 @@
     postgresql_enabled: True
   when: moodle_enabled or pathagar_enabled
 
-- name: Turn on docker if schooltool is to be installed
-  set_fact:
-    docker_install: True
-    docker_enabled: True
-  when: schooltool_enabled or schooltool_install
+#- name: Turn on docker if schooltool is to be installed
+#  set_fact:
+#    docker_install: True
+#    docker_enabled: True
+#  when: schooltool_enabled or schooltool_install
 
 - name: Set python_path for is_redhat
   set_fact:
