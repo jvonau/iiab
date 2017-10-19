@@ -96,11 +96,11 @@
     postgresql_enabled: True
   when: moodle_enabled or pathagar_enabled
 
-- name: Turn on docker if schooltool is to be installed
-  set_fact:
-    docker_install: True
-    docker_enabled: True
-  when: schooltool_enabled or schooltool_install
+#- name: Turn on docker if schooltool is to be installed
+#  set_fact:
+#    docker_install: True
+#    docker_enabled: True
+#  when: schooltool_enabled or schooltool_install
 
 - name: Set python_path for is_redhat
   set_fact:
