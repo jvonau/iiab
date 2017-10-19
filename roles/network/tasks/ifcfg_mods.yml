@@ -102,7 +102,7 @@
   ignore_errors: True
   when: iiab_lan_iface != "none" and not installing and not iiab_demo_mode
 
-# we could do the DEVICE name stuff for a cleaner looking nmcli 
+# we could do the DEVICE name stuff for a cleaner looking nmcli
 - name: Enabling ifcfg slaves
   shell: nmcli conn up id "System {{ item|trim }}"
   ignore_errors: True
