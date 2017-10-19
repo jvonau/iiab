@@ -35,7 +35,7 @@
        virtualenv_site_packages=no
 #       extra_args="--no-cache-dir"
 #       extra_args="--disable-pip-version-check"
-  when: internet_available and not debuntu
+  when: internet_available and not is_debuntu
 
 - name: Install ka-lite with pip
   pip: name=ka-lite-static
@@ -44,7 +44,7 @@
        virtualenv_site_packages=no
 #       extra_args="--no-cache-dir"
 #       extra_args="--disable-pip-version-check"
-  when: internet_available and not debuntu
+  when: internet_available and not is_debuntu
 
 - name: Default is to have cronserve started with kalite
   set_fact:
