@@ -19,9 +19,8 @@
   include: detected_redhat.yml
   when: is_redhat
 
-- name: check to see if dhcpcd is installed and active
+- name: check to see if dhcpcd is installed and active - Can Fail
   shell: systemctl is-enabled dhcpcd
-  when: is_debuntu
   register: dhcpcd_test
   ignore_errors: True
 
