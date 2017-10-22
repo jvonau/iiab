@@ -14,6 +14,20 @@
      exFAT_enabled: True
   when: xo_model != "none"
 
+- name: set FQDN
+  set_fact:
+    iiab_fqdn: "{{ iiab_hostname }}.{{ iiab_domain }}"
+    FQDN_changed: False
+
+- name: FQDN changed
+  set_fact:
+    FQDN_changed: True
+  when: iiab_fqdn != ansible_fqdn
+
+# Now check FQDN
+- include: roles/2-common/tasks/hostname.yml
+  when: not first_run and FQDN_changed
+
 # Discover  do we have a gateway? -- if ansible detects gateway, becomes WAN candidate
 - name: Finding gateway
   set_fact:
@@ -45,33 +59,6 @@
 - name: Cleanup internet test file
   file: path=/tmp/heart-beat.txt
         state=absent
-
-- name: add version section
-  ini_file: dest='{{ iiab_config_file }}'
-            section=runtime
-            option='{{ item.option }}'
-            value='{{ item.value }}'
-  with_items:
-    - option: 'runtime_branch'
-      value: '{{ ansible_local["local_facts"]["iiab_branch"] }}'
-    - option: 'runtime_commit'
-      value: '{{ ansible_local["local_facts"]["iiab_commit"] }}'
-    - option: 'runtime_date'
-      value: '{{ ansible_date_time["iso8601"] }}'
-    - option: 'runtime_php'
-      value: '{{ phplib_dir }}'
-    - option: 'kernel'
-      value: '{{ ansible_kernel }}'
-    - option: 'memory_mb'
-      value: '{{ ansible_memtotal_mb }}'
-    - option: 'swap_mb'
-      value: '{{ ansible_swaptotal_mb }}'
-    - option: 'product_id'
-      value: '{{ ansible_product_uuid }}'
-    - option: 'gw_active'
-      value:  '{{ gw_active }}'
-    - option: 'internet_available'
-      value:  '{{ internet_available }}'
 
 # Put all computed vars here so derive properly from any prior var file
 - name: If the TZ is not set in env, set it to UTC
@@ -176,3 +163,36 @@
   set_fact:
     is_CentOS: True
   when: ansible_distribution == "CentOS"
+
+- name: add version section
+  ini_file: dest='{{ iiab_config_file }}'
+            section=runtime
+            option='{{ item.option }}'
+            value='{{ item.value }}'
+  with_items:
+    - option: 'runtime_branch'
+      value: '{{ ansible_local["local_facts"]["iiab_branch"] }}'
+    - option: 'runtime_commit'
+      value: '{{ ansible_local["local_facts"]["iiab_commit"] }}'
+    - option: 'runtime_date'
+      value: '{{ ansible_date_time["iso8601"] }}'
+    - option: 'runtime_php'
+      value: '{{ phplib_dir }}'
+    - option: 'kernel'
+      value: '{{ ansible_kernel }}'
+    - option: 'memory_mb'
+      value: '{{ ansible_memtotal_mb }}'
+    - option: 'swap_mb'
+      value: '{{ ansible_swaptotal_mb }}'
+    - option: 'product_id'
+      value: '{{ ansible_product_uuid }}'
+    - option: 'gw_active'
+      value:  '{{ gw_active }}'
+    - option: 'internet_available'
+      value:  '{{ internet_available }}'
+    - option: 'first_run'
+      value:  '{{ first_run }}'
+    - option: 'local_tz'
+      value:  '{{ local_tz }}'
+    - option: 'FQDN_changed'
+      value:  '{{ FQDN_changed }}'
