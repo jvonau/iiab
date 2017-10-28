@@ -16,10 +16,11 @@
 
 - name: Create database for WAN to collect vnStat data
   shell: /usr/bin/vnstat -i {{ iiab_wan_iface }}
+  when: not iiab_wan_iface == "none"
 
 - name: Create database for LAN to collect vnStat data if not appliance config
   shell: /usr/bin/vnstat -i {{ iiab_lan_iface }}
-  when: not iiab_lan_iface == ""
+  when: not iiab_lan_iface == "none"
 
 - name: Start vnStat daemon via systemd
   service: name=vnstat enabled=yes state=started
