@@ -73,4 +73,5 @@
   when: iiab_wireless_lan_iface != "none" and hostapd_enabled and iiab_network_mode != "Appliance"
 
 - name: dhcp_server may be affected - starting - user choice
-  service: name={{ dhcp_service2 }} state=started and not is_VM
+  service: name={{ dhcp_service2 }} state=started
+  when: not is_VM
