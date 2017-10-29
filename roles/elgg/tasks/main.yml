@@ -5,6 +5,7 @@
   shell: wget {{ iiab_download_url }}/elgg-{{ elgg_version }}.zip -c -P {{ downloads_dir }}
          creates={{ downloads_dir }}/elgg-{{ elgg_version }}.zip
   when: internet_available
+  tags: download
 
 - name: Determine if software is already expanded
   stat: path=/opt/elgg-{{ elgg_version }}/index.php
