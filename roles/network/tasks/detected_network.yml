@@ -16,7 +16,7 @@
   when: discovered_wan_iface != "none"
 
 - name: RedHat network detection
-  include: detected_redhat.yml
+  include: roles/network/tasks/detected_redhat.yml
   when: is_redhat
 
 - name: check to see if dhcpcd is installed and active - Can Fail
@@ -193,3 +193,6 @@
     value: '{{ discovered_lan_iface }}'
   - option: 'gui_static_wan'
     value: '{{ gui_static_wan }}'
+
+- name: computed_network
+  include: roles/network/tasks/computed_network.yml
