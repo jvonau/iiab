@@ -43,13 +43,13 @@ else
     mkdir -p /etc/iiab
     echo "{}" > /etc/iiab/config_vars.yml
     ./runtags download
-    echo "" >> ANSIBLE_LOG_PATH
-    echo "DOWNLOAD DONE" >> ANSIBLE_LOG_PATH
-    echo "" >> ANSIBLE_LOG_PATH
+    echo "" >> $ANSIBLE_LOG_PATH
+    echo "DOWNLOAD DONE" >> $ANSIBLE_LOG_PATH
+    echo "" >> $ANSIBLE_LOG_PATH
     ./runtags download,once
-    echo "" >> ANSIBLE_LOG_PATH
-    echo "ONCE DONE" >> ANSIBLE_LOG_PATH
-    echo "" >> ANSIBLE_LOG_PATH
+    echo "" >> $ANSIBLE_LOG_PATH
+    echo "ONCE DONE" >> $ANSIBLE_LOG_PATH
+    echo "" >> $ANSIBLE_LOG_PATH
 fi
 
 if [ ! -f $PLAYBOOK ]; then
