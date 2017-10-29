@@ -42,7 +42,7 @@ if [ -f /etc/iiab/iiab.env ]; then
 else
     mkdir -p /etc/iiab
     echo "{}" > /etc/iiab/config_vars.yml
-    ./runtags download,base
+    ./runtags download,once
 fi
 
 if [ ! -f $PLAYBOOK ]; then

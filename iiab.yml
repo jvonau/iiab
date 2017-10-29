@@ -10,8 +10,8 @@
 
   roles:
       - { role: 0-init, tags: ['0-init'] }
-      - { role: 1-prep, tags: ['1-prep','platform','base'] }
-      - { role: 2-common, tags: ['2-common','base'] }
+      - { role: 1-prep, tags: ['1-prep','platform','once','base'] }
+      - { role: 2-common, tags: ['2-common','once','base'] }
       - { role: 3-base-server, tags: ['3-base-server','base'] }
       - { role: 4-server-options, tags: ['4-server-options'] }
       - { role: 5-xo-services, tags: ['5-xo-services'] }
