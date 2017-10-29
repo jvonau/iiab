@@ -7,13 +7,6 @@
   tags:
     - download
 
-- name: Put the config file in place
-  template: src=vnstat.conf.j2
-            dest=/etc/vnstat.conf
-            mode=0744
-            owner=root
-            group=root
-
 - name: Grab the network vars if network has not been run
   include_vars: roles/network/defaults/main.yml
   when: iiab_stage > 4
@@ -21,6 +14,13 @@
 - name: Grab the network detection if network has not been run
   include: roles/network/tasks/detected_network.yml
   when: iiab_stage > 4
+
+- name: Put the config file in place
+  template: src=vnstat.conf.j2
+            dest=/etc/vnstat.conf
+            mode=0744
+            owner=root
+            group=root
 
 - name: Create database for WAN to collect vnStat data
   shell: /usr/bin/vnstat -i {{ iiab_wan_iface }}
