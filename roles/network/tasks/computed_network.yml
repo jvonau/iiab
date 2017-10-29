@@ -117,6 +117,7 @@
 - name: No LAN configured - 'Appliance' mode
   set_fact:
     iiab_network_mode: "Appliance"
+    iiab_lan_iface: "none"
   when: iiab_lan_iface == "none"
 
 - name: LAN configured - 'LanController' mode
