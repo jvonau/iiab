@@ -3,48 +3,51 @@
 PLAYBOOK="iiab-steps.yml"
 INVENTORY="ansible_hosts"
 CWD=`pwd`
-# Pass cmdline options for ansible
-ARGS="$@"
+# Add cmdline options for passing to ansible
+# todo add proper shift to gobble up --debug --upgrade
+ARGS=""
 
 export ANSIBLE_LOG_PATH="$CWD/iiab-install.log"
 
 if [ ! -f /etc/ansible/facts.d/local_facts.fact ]; then
-   mkdir -p /etc/ansible/facts.d
+    mkdir -p /etc/ansible/facts.d
 fi
 cp ./scripts/local_facts.fact /etc/ansible/facts.d/local_facts.fact
 
 STAGE=""
 
-if [ -f /etc/iiab/iiab.env ]
-then
-  OLD=`grep XSCE /etc/iiab/iiab.env | wc -l`
-  if [ "$OLD" != 0 ]
-  then
-    rm /etc/iiab/iiab.env
-  else
-    source /etc/iiab/iiab.env
-    if [ ! $STAGE == 9 ]
-    then
-        echo "Restarting STAGE=$STAGE"
+if [ -f /etc/iiab/iiab.env ]; then
+    OLD=`grep XSCE /etc/iiab/iiab.env | wc -l`
+    if [ "$OLD" != 0 ] || [ "$1" = "--upgrade" ]; then
+        echo "Found old XSCE install - re-installing from scratch"
+        rm /etc/iiab/iiab.env
+        # check ansible version here and force ansible upgrade if needed
+    else
+        source /etc/iiab/iiab.env
+        if [ $STAGE == 9 ] && [ "$1" = "--debug" ]; then
+            echo "Entering debug mode"
+            sed -i -e 's/^STAGE=.*/STAGE=2/' /etc/iiab/iiab.env
+        elif [ ! $STAGE == 9 ]; then
+            echo "Restarting from STAGE $STAGE"
+        else
+            # place keeper add read response
+            echo "offer 'Y' dialog box option to override"
+            echo "'runansible' has already been completed"
+            echo "use --debug to override "
+            echo "In demo mode not preventing runansible"
+#            echo "Exiting."
+#            exit 1
+        fi
     fi
-    if [ $STAGE == 9 ]
-    then
-       # place keeper
-        echo "offer 'Y' dialog box and --debug option to override"
-        echo "need to rewrite STAGE= before ansible is called"
-        # exit 0
-    fi
-  fi
 else
-  mkdir -p /etc/iiab
+    mkdir -p /etc/iiab
 fi
 
-if [ ! -f $PLAYBOOK ]
-then
- echo "IIAB Playbook not found."
- echo "Please run this command from the top level of the git repo."
- echo "Exiting."
- exit 1
+if [ ! -f $PLAYBOOK ]; then
+    echo "IIAB Playbook not found."
+    echo "Please run this command from the top level of the git repo."
+    echo "Exiting."
+    exit 1
 fi
 
 # if vars/local_vars.yml is missing, put a default one in place - First Run
