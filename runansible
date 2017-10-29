@@ -41,6 +41,7 @@ if [ -f /etc/iiab/iiab.env ]; then
     fi
 else
     mkdir -p /etc/iiab
+    echo "{}" > /etc/iiab/config_vars.yml
     ./runtags download,2-common
 fi
 
