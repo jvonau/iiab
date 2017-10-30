@@ -5,12 +5,14 @@
     dest="{{ downloads_dir }}/calibre-installer.py"
     mode=0755
   when: ansible_distribution == "CentOS"
+  tags: download
 
 - name: Install Calibre
   shell: "{{ downloads_dir }}/calibre-installer.py >> /dev/null"
   args:
     creates: /usr/bin/calibre-uninstall
   when: calibre_install and ansible_distribution == 'CentOS'
+  tags: download
 
 - name: Install Calibre rpms
 # the fedora rpm arm version, though older, takes care of dependencies, and exists
@@ -19,6 +21,7 @@
   with_items:
     - calibre
   when: calibre_install and ansible_distribution != 'CentOS'
+  tags: download
 
 - name: Create Calibre service(s) and support scripts
   template: backup=no

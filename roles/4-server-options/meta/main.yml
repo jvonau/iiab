@@ -1,0 +1,11 @@
+# Server Options
+dependencies:
+- { role: sshd, tags: ['base','sshd'] }
+- { role: openvpn, tags: ['openvpn'], when: openvpn_install }
+- { role: network, tags: ['base','network'] }
+- { role: homepage, tags: ['base','homepage'] }
+- { role: postgresql, tags: ['postgresql','pathagar','moodle'], when: postgresql_install }
+- { role: authserver, tags: ['olpc', 'authserver'], when: authserver_install }
+- { role: cups, tags: ['cups'], when: cups_install }
+- { role: samba, tags: ['samba'], when: samba_install }
+- { role: usb-lib, tags: ['usb-lib'], when: usb_lib_install }
