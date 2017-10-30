@@ -48,7 +48,8 @@
   when: is_debian_9
 
 - name: Install usbmount for debian-9
-  command: apt install -y {{ downloads_dir }}/usbmount_0.0.14.1_all.deb
+  apt:
+    deb: {{ downloads_dir }}/usbmount_0.0.14.1_all.deb
   when: is_debian_9
 
 - name: Install packages for Debian
