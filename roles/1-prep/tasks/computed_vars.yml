@@ -48,6 +48,11 @@
         state=absent
 
 # Put all computed vars here so derive properly from any prior var file
+- name: Set some default facts
+  set_fact:
+    mysql_service: mariadb
+    is_F18: False
+
 - name: If the TZ is not set in env, set it to UTC
   set_fact: local_tz='UTC'
   when: local_tz == ""
@@ -103,10 +108,6 @@
 # for various reasons the mysql service can not be enabled on fedora 20,
 # but 'mariadb', which is its real name can
 # on fedora 18 we need to use 'mysqld'
-
-- name: Set mysqld_service to mariadb by default
-  set_fact:
-    mysql_service: mariadb
 
 - name: Set mysqld_service to mysqld for Fedora 18
   set_fact:
