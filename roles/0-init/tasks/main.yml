@@ -1,7 +1,11 @@
 # Initialize
 
 - name: ...IS BEGINNING ============================================
-  command: echo
+  set_fact:
+    installing: False
+    is_F18: False
+    first_run: False
+    gw_active: False
 
 - name: Determine if runansible was run
   stat: path=/etc/iiab/iiab.env

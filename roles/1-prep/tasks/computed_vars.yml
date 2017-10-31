@@ -10,6 +10,11 @@
      phplib_dir: '{{ ansible_local.local_facts.phplib_dir }}'
      iiab_stage: '{{ ansible_local.local_facts.stage }}'
 
+- name: Setting first run flag temp hack
+  set_fact:
+      first_run: True
+  when: iiab_stage|int < 4
+
 - name: Set exFAT enabled for XO laptops
   set_fact:
      exFAT_enabled: True
