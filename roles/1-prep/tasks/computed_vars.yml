@@ -30,8 +30,8 @@
       FQDN_changed: True
   when: iiab_fqdn != ansible_fqdn
 
-# Now check FQDN
-- include_role: roles/2-common/tasks/hostname.yml
+- name: Now check FQDN
+  include_role: roles/2-common/tasks/hostname.yml
   when: FQDN_changed
 
 # Discover  do we have a gateway? -- if ansible detects gateway, becomes WAN candidate
