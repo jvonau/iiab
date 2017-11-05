@@ -80,6 +80,7 @@
            state=started
            enabled=yes
   when: postgresql_enabled
+  ignore_errors: True
 
 - name: Stop and disable postgresql service if not postgresql_enabled
   service: name=postgresql
