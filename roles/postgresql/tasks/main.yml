@@ -44,8 +44,7 @@
 - name: Initialize the postgres db
   command:  su - postgres -c "/usr/lib/postgresql/{{ postgresql_version }}/bin/initdb -E 'UTF-8' --locale={{ postgresql_locale }}  -D /library/pgsql-iiab"
             creates=/library/pgsql-iiab/pg_hba.conf
-  when: is_debian
-  ignore_errors: True
+  when: is_debian and not is_debian_9
 
 - name: Initialize the postgres db
   command:  su - postgres -c "/usr/lib/postgresql/9.5/bin/initdb -E 'UTF-8' --locale={{ postgresql_locale }}  -D /library/pgsql-iiab"
@@ -55,7 +54,7 @@
 - name: Initialize the postgres db
   command:  su - postgres -c "/usr/bin/initdb -E 'UTF-8' --lc-collate={{ postgresql_locale }} --lc-ctype={{ postgresql_locale }}  -D /library/pgsql-iiab"
             creates=/library/pgsql-iiab/pg_hba.conf
-  when: not is_debuntu
+  when: not is_debuntu or is_debian_9
 
 - name: Configure PostgreSQL
   template: backup=yes
