@@ -53,11 +53,6 @@
       owner: '{{ proxy_user }}'
       group: '{{ proxy_user }}'
       mode: '0644'
-    - src: 'roles/network/templates/squid/iiab-httpcache.j2'
-      dest: '/usr/bin/iiab-httpcache'
-      owner: 'root'
-      group: 'root'
-      mode: '0755'
 
 - name: Create Squid cache directory
   file: path=/library/cache
@@ -73,7 +68,7 @@
         mode=0750
         state=directory
 
-- include_tasks: roles/network/tasks/dansguardian.yml
+- include_tasks: dansguardian.yml
   when: dansguardian_install
 
 - name: Add Squid to service list
