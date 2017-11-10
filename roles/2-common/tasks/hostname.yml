@@ -22,6 +22,10 @@
   include_tasks: roles/httpd/tasks/main.yml
   when: iiab_stage|int > 3
 
+- name: Re-configuring squid - not initial install
+  include_tasks: roles/network/tasks/squid.yml
+  when: iiab_stage|int > 3 and squid_install
+
 - name: Re-configuring rest of networking - not initial install
   include_tasks: roles/network/tasks/main.yml
   when: iiab_stage|int > 4
