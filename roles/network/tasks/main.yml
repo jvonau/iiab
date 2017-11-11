@@ -27,19 +27,19 @@
 
 - name: Configuring named
   include_tasks: named.yml
-  when: FQDN_changed and named_install
+  when: FQDN_changed and not first_run and named_install
 
 - name: Configuring dhcpd
   include_tasks: dhcpd.yml
-  when: FQDN_changed and dhcpd_install
+  when: FQDN_changed and not first_run and dhcpd_install
 
 - name: Configuring squid
   include_tasks: squid.yml
-  when: FQDN_changed and squid_install
+  when: FQDN_changed and not first_run and squid_install
 
 - name: Configuring wondershaper
   include_tasks: wondershaper.yml
-  when: FQDN_changed and wondershaper_install
+  when: wondershaper_install
 
 #### start services
 - include_tasks: avahi.yml
