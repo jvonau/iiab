@@ -72,5 +72,4 @@
   - name: network
     include_role:
       name: network
-    when: ansible_local.local_facts.stage|int < 9
     tags: network
