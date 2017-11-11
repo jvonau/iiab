@@ -22,7 +22,7 @@
   # has no "when: XXXXX_install" flag
   tags: base, mysql
 
-
+# dhcpd named (to be replaced with dnsmasq) squid are install time options
 - name: Installing optional packages
   include_tasks: options.yml
 

@@ -1,4 +1,4 @@
-- name: Turn the crank for systemd
+- name: Set hostname with hostnamectl
   shell: hostnamectl set-hostname "{{ iiab_hostname }}.{{ iiab_domain }}"
   when: is_debuntu
 
@@ -22,10 +22,10 @@
   include_tasks: roles/httpd/tasks/main.yml
   when: iiab_stage|int > 3
 
-- name: Re-configuring squid - not initial install
-  include_tasks: roles/network/tasks/squid.yml
-  when: iiab_stage|int > 3 and squid_install
+#- name: Re-configuring squid - not initial install
+#  include_tasks: roles/network/tasks/squid.yml
+#  when: iiab_stage|int > 3 and squid_install
 
 - name: Re-configuring rest of networking - not initial install
   include_tasks: roles/network/tasks/main.yml
-  when: iiab_stage|int > 4
+  when: iiab_stage|int > 3

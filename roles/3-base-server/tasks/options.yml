@@ -61,3 +61,6 @@
   when: dansguardian_install
   tags:
     - download
+
+- name: Install dnsmasq
+  package: name=dnsmasq state=present
