@@ -16,12 +16,10 @@
 
 - name: Configuring named
   include_tasks: roles/network/tasks/named.yml
-  when: FQDN_changed
   tags: named, network, domain
 
 - name: Configuring dhcpd
   include_tasks: roles/network/tasks/dhcpd.yml
-  when: FQDN_changed
   tags: dhcpd, network, domain
 
 - name: HTTPD

@@ -37,6 +37,14 @@
     - hostname
     - domain
 
+- name: Configuring named on FQDN change
+  include_tasks: roles/network/tasks/named.yml
+  when: FQDN_changed and iiab_stage|int > 3
+
+- name: Configuring dhcpd on FQDN change
+  include_tasks: roles/network/tasks/dhcpd.yml
+  when: FQDN_changed and iiab_stage|int > 3
+
 #### start services
 - include_tasks: roles/network/avahi.yml
   tags:

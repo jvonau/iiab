@@ -27,5 +27,5 @@
   when: iiab_stage|int > 3 and squid_install
 
 - name: Re-configuring rest of networking - not initial install
-  include_tasks: roles/network/tasks/main.yml
+  include_tasks: roles/9-local-addons/tasks/main.yml
   when: iiab_stage|int > 4
