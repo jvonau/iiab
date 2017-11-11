@@ -16,21 +16,11 @@
   when: openvpn_install
   tags: openvpn
 
-- name: Configuring named
-  include_tasks: roles/network/tasks/named.yml
-  when: FQDN_changed
-  tags: named, network, domain
-
-- name: Configuring dhcpd
-  include_tasks: roles/network/tasks/dhcpd.yml
-  when: FQDN_changed
-  tags: dhcpd, network, domain
-
-- name: NETWORK
-  include_role:
-    name: network
-  # has no "when: XXXXX_install" flag
-  tags: base, network
+#- name: NETWORK
+#  include_role:
+#    name: network
+#  # has no "when: XXXXX_install" flag
+#  tags: base, network
 
 - name: HOMEPAGE
   include_role:
