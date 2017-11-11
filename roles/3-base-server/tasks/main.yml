@@ -22,25 +22,9 @@
   # has no "when: XXXXX_install" flag
   tags: base, mysql
 
-- name: Configuring wondershaper
-  include_tasks: roles/network/tasks/wondershaper.yml
-  when: wondershaper_install
-  tags: wondershaper, network
 
-- name: Configuring named
-  include_tasks: roles/network/tasks/named.yml
-  when: named_install
-  tags: named, network, domain
-
-- name: Configuring dhcpd
-  include_tasks: roles/network/tasks/dhcpd.yml
-  when: dhcpd_install
-  tags: dhcpd, network, domain
-
-- name: Configuring Squid
-  include_tasks: roles/network/tasks/squid.yml
-  when: squid_install
-  tags: squid, network, domain
+- name: Installing optional packages
+  include_tasks: options.yml
 
 - name: Restart httpd
   service: name="{{ apache_service }}"

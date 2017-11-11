@@ -1,0 +1,63 @@
+- name: Install named packages (debuntu)
+  package: name={{ item }}
+           state=present
+  with_items:
+   - bind9
+   - bind9utils
+  when: named_install and is_debuntu
+  tags:
+    - download
+
+- name: Install named packages (OS's that are not debuntu)
+  package: name={{ item }}
+           state=present
+  with_items:
+   - bind
+   - bind-utils
+  when: named_install and not is_debuntu
+  tags:
+    - download
+
+- name: Install dhcp package
+  package: name=isc-dhcp-server
+           state=present
+  when: dhcpd_install and is_debuntu
+  tags:
+    - download
+
+- name: Install dhcp package
+  package: name=dhcp
+           state=present
+  when: dhcpd_install and not is_debuntu
+  tags:
+    - download
+
+- name: Create non-privileged user
+  user: name=dhcpd
+        createhome=no
+  when: dhcpd_install and is_debuntu 
+
+- name: Install Squid packages
+  package: name={{ item }}
+           state=present
+  with_items:
+    - "{{ proxy }}"
+    - cadaver
+  when: squid_install
+  tags:
+    - download
+
+- name: Create the Squid user
+  user: name={{ proxy_user }}
+        createhome=False
+        shell=/bin/false
+  when: squid_install and is_debuntu 
+
+- name: Install DansGuardian packages
+  package: name={{ item }}
+           state=present
+  with_items:
+    - dansguardian
+  when: dansguardian_install
+  tags:
+    - download

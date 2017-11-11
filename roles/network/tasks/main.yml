@@ -25,6 +25,14 @@
     - hostname
     - domain
 
+- name: Configuring named
+  include_tasks: named.yml
+  when: FQDN_changed and named_install
+
+- name: Configuring dhcpd
+  include_tasks: dhcpd.yml
+  when: FQDN_changed and dhcpd_install
+
 #### start services
 - include_tasks: avahi.yml
   tags:

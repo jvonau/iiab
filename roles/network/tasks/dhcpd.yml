@@ -1,21 +1,8 @@
-- name: Install dhcp package
-  package: name=isc-dhcp-server
-           state=present
-  when: is_debuntu
-  tags:
-    - download
-
-- name: Install dhcp package
-  package: name=dhcp
-           state=present
-  when: not is_debuntu
-  tags:
-    - download
-
-- name: Create non-privileged user
-  user: name=dhcpd
-        createhome=no
-  when: is_debuntu
+- name: Disable stock dhcp_service
+  service: name={{ dhcp_service }}
+           enabled=no
+           state=stopped
+  when: first_run and is_debuntu
 
 - name: Configure dhcpd
   template: src={{ item.src }}
