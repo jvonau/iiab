@@ -33,6 +33,14 @@
   include_tasks: dhcpd.yml
   when: FQDN_changed and dhcpd_install
 
+- name: Configuring squid
+  include_tasks: squid.yml
+  when: FQDN_changed and squid_install
+
+- name: Configuring wondershaper
+  include_tasks: wondershaper.yml
+  when: FQDN_changed and wondershaper_install
+
 #### start services
 - include_tasks: avahi.yml
   tags:
