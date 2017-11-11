@@ -5,7 +5,7 @@
   when: is_debuntu
 
 - name: Install avahi announce config files
-  template: src=avahi/schoolserver.service
+  template: src=roles/network/templates/avahi/schoolserver.service
             dest=/etc/avahi/services/schoolserver.service
             owner=avahi
             group=avahi

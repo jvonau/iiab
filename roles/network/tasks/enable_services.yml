@@ -16,8 +16,8 @@
             group=root
             mode={{ item.mode }}
   with_items:
-   - { src: 'dhcp/dhcpd-env.j2' , dest: '/etc/sysconfig/dhcpd' , mode: '0644' }
-   - { src: 'dhcp/dhcpd-iiab.conf.j2', dest: '/etc/dhcpd-iiab.conf', mode: '0644' }
+   - { src: 'roles/network/templates/dhcp/dhcpd-env.j2' , dest: '/etc/sysconfig/dhcpd' , mode: '0644' }
+   - { src: 'roles/network/templates/dhcp/dhcpd-iiab.conf.j2', dest: '/etc/dhcpd-iiab.conf', mode: '0644' }
   when: dhcpd_enabled and dhcpd_install
 
 - name: Copy named file
@@ -27,8 +27,8 @@
             group=root
             mode={{ item.mode }}
   with_items:
-   - { src: 'named/school.local.zone.db' , dest: '/var/named-iiab/' , mode: '0644' }
-   - { src: 'named/school.internal.zone.db' , dest: '/var/named-iiab/' , mode: '0644' }
+   - { src: 'roles/network/templates/named/school.local.zone.db' , dest: '/var/named-iiab/' , mode: '0644' }
+   - { src: 'roles/network/templates/named/school.internal.zone.db' , dest: '/var/named-iiab/' , mode: '0644' }
 
 - name: Enable named service
   service: name={{ dns_service }}
@@ -46,7 +46,7 @@
   when: not dnsmasq_enabled and dnsmasq_install
 
 - name: dnsmasq copy config file to /etc
-  template: src=network/dnsmasq.conf dest=/etc/
+  template: src=roles/network/templates/network/dnsmasq.conf dest=/etc/
   when: dnsmasq_enabled and dnsmasq_install
 
 - name: Enable dnsmasq
@@ -126,7 +126,7 @@
             group='root'
             mode='0755'
   with_items:
-   - { 0: 'gateway/iiab-gen-iptables', 1: '/usr/bin/iiab-gen-iptables' }
+   - { 0: 'roles/network/templates/gateway/iiab-gen-iptables', 1: '/usr/bin/iiab-gen-iptables' }
 
 - name: Add 'squid' to service list
   ini_file: dest='{{ service_filelist }}'
