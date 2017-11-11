@@ -56,7 +56,7 @@
     - network
     - AP
 
-- include_tasks: roles/network/computed_services.yml
+- include_tasks: roles/network/tasks/computed_services.yml
   tags:
     - network
     - named
