@@ -47,11 +47,11 @@
   when: FQDN_changed and iiab_stage|int > 3
 
 #### start services
-- include_tasks: roles/network/avahi.yml
+- include_tasks: roles/network/tasks/avahi.yml
   tags:
     - network
 
-- include_tasks: roles/netwrork/tasks/hostapd.yml
+- include_tasks: roles/network/tasks/hostapd.yml
   tags:
     - network
     - AP
