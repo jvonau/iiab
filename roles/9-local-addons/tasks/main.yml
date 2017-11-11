@@ -14,6 +14,7 @@
         group: root
         mode: 0644
 
+- include_vars: roles/network/defaults/main.yml
 - include_tasks: roles/network/tasks/detected_network.yml
   when: not installing
   tags:
