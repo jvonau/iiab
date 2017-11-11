@@ -25,10 +25,6 @@
         state=absent
   when: iiab_lan_iface != "br0" and wan_ip == "dhcp"
 
-- name: Supply resolvconf.conf
-  template: dest=/etc/resolvconf.conf
-            src=network/resolvconf.j2
-
 - name: Supply dhcpcd.conf
   template: dest=/etc/dhcpcd.conf
             src=network/dhcpcd.conf.j2

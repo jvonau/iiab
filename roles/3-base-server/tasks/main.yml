@@ -9,14 +9,22 @@
   when: wondershaper_install
   tags: wondershaper, network
 
+- name: Configuring named
+  include_tasks: roles/network/tasks/named.yml
+  tags: named, network, domain
+
+- name: Supply resolvconf.conf
+  template: dest=/etc/resolvconf.conf
+            src=roles/network/templates/network/resolvconf.j2
+
+- name: Restart resolvconf
+  service: name=resolvconf state=restarted
+  when: is_debuntu
+
 - name: Configuring Squid
   include_tasks: roles/network/tasks/squid.yml
   when: squid_install
   tags: squid, network, domain
-
-- name: Configuring named
-  include_tasks: roles/network/tasks/named.yml
-  tags: named, network, domain
 
 - name: Configuring dhcpd
   include_tasks: roles/network/tasks/dhcpd.yml
