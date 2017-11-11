@@ -85,8 +85,8 @@ gw_block_https: False
 block_DNS: False
 
 # dnsmasq
-#named_install: True
-#named_enabled: False
+dnsmasq_install: True
+#dnsmasq_enabled: False
 
 # dhcpd
 dhcpd_install: True
