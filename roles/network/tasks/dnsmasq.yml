@@ -1,3 +1,6 @@
+- name: Install dnsmasq
+  package: name=dnsmasq state=present
+
 - name: Configure dnsmasq
   template: src={{ item.src }}
             dest={{ item.dest }}

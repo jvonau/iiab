@@ -85,7 +85,8 @@ gw_block_https: False
 block_DNS: False
 
 # dnsmasq
-dnsmasq_install: True
+# initial install takes out dns right after installation
+dnsmasq_install: False
 #dnsmasq_enabled: False
 
 # dhcpd

@@ -41,6 +41,10 @@
   include_tasks: wondershaper.yml
   when: wondershaper_install
 
+- name: Configuring dnsmasq
+  include_tasks: dnsmasq.yml
+  when: dnsmasq_install
+
 #### start services
 - include_tasks: avahi.yml
   tags:
