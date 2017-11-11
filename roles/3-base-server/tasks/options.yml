@@ -62,6 +62,6 @@
   tags:
     - download
 
-- name: Install dnsmasq
-  package: name=dnsmasq state=present
-  when: dnsmasq_install
+#- name: Install dnsmasq
+#  package: name=dnsmasq state=present
+#  when: dnsmasq_install
