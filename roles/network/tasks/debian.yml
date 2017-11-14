@@ -34,15 +34,25 @@
             src=network/dhcpcd.conf.j2
   when: dhcpcd_result == "enabled"
 
-- name: Copy the bridge script
-  template: dest=/etc/network/interfaces.d/iiab
-            src=network/systemd.j2
-  when: not is_rpi and (iiab_lan_iface == "br0" or wan_ip != "dhcp")
+- name: Copy the bridge script - Creates br0
+  template: dest=/etc/systemd/network/IIAB-Bridge.netdev
+            src=network/systemd-br0.j2
+  when: iiab_lan_iface == "br0"
 
-- name: Copy the bridge script for RPi
-  template: dest=/etc/network/interfaces.d/iiab
-            src=network/rpi.j2
-  when: is_rpi and iiab_lan_iface == "br0"
+- name: Copy the bridge script - Assigns IP address
+  template: dest=/etc/systemd/network/IIAB-Bridge.network
+            src=network/systemd-br0-network.j2
+  when: iiab_lan_iface == "br0"
+
+- name: Copy the bridge script - Assigns br0 wired slaves
+  template: dest=/etc/systemd/network/IIAB-Slave.network
+            src=network/systemd-br0-slave.j2
+  when: iiab_lan_iface == "br0" and iiab_wired_lan_iface is defined
+
+#- name: Copy the bridge script for RPi
+#  template: dest=/etc/network/interfaces.d/iiab
+#            src=network/rpi.j2
+#  when: is_rpi and iiab_lan_iface == "br0"
 
 - name: bind may be affected
   service: name={{ dns_service }} state=stopped
@@ -66,11 +76,11 @@
   when: dhcpcd_result == "enabled"
 
 - name: Restart the networking service
-  service: name=networking  state=restarted
-  when: not nobridge is defined and not no_net_restart
+  service: name=systemd-networkd enabled=yes state=restarted
+#  when: not nobridge is defined and not no_net_restart
   
 - name: Restart hostapd when WiFi is present
-  service: name=hostapd state=restarted
+  service: name=hostapd enabled=yes state=restarted
   when: iiab_wireless_lan_iface is defined and hostapd_enabled and iiab_network_mode != "Appliance"
 
 #- name: dhcp_server may be affected - starting - user choice
