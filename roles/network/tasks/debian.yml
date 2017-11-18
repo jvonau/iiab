@@ -32,7 +32,7 @@
 - name: Supply dhcpcd.conf
   template: dest=/etc/dhcpcd.conf
             src=network/dhcpcd.conf.j2
-  when: dhcpcd_result == "enabled"
+  when: dhcpcd_result == "/sbin/dhcpcd"
 
 - name: Copy the bridge script
   template: dest=/etc/network/interfaces.d/iiab
@@ -63,7 +63,7 @@
 # now pick up denyinterfaces
 - name: Restart dhcpcd
   service: name=dhcpcd state=restarted
-  when: dhcpcd_result == "enabled"
+  when: dhcpcd_result == "/sbin/dhcpcd" and not no_net_restart
 
 - name: Restart the networking service
   service: name=networking  state=restarted

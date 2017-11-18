@@ -5,9 +5,20 @@
 #################   LANCONTROLLER   ###################
 auto br0
 iface br0 inet manual
-#{% if iiab_wireless_lan_iface is defined %}{{ iiab_wireless_lan_iface }}{% endif %}
 {% if iiab_wired_lan_iface is defined %}
+{% if not iiab_wireless_lan_iface is defined %}
     bridge_ports {{ iiab_wired_lan_iface }}
+{% endif %}
+{% endif %}
+{% if not iiab_wired_lan_iface is defined %}
+{% if iiab_wireless_lan_iface is defined %}
+    bridge_ports {{ iiab_wireless_lan_iface }}
+{% endif %}
+{% endif %}
+{% if iiab_wired_lan_iface is defined %}
+{% if iiab_wireless_lan_iface is defined %}
+    bridge_ports {{ iiab_wired_lan_iface }} {{ iiab_wireless_lan_iface }}
+{% endif %}
 {% endif %}
     bridge_maxwait 0
     dns-nameservers 127.0.0.1
