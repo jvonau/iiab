@@ -43,7 +43,7 @@
     - ../roles/mysql
     - ../roles/network
     - ../roles/nextcloud
-    - ../roles/openvpn
+    #- ../roles/openvpn
     - ../roles/osm
     #- ../roles/owncloud
     #- ../roles/pathagar
