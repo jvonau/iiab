@@ -86,8 +86,7 @@
   when: has_NM and not wan_in_interfaces and iiab_lan_iface == "br0"
 
 - name: Reload systemd
-  systemd:
-    daemon-reload
+  shell: systemctl daemon-reload
 
 # now pick up denyinterfaces
 - name: Restart dhcpcd
