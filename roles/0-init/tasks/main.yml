@@ -1,7 +1,8 @@
 # Initialize
 
 - name: ...IS BEGINNING ============================================
-  stat: path=/etc/iiab/iiab.env
+  stat:
+    path: /etc/iiab/iiab.env
   register: NewInstall
 
 - name: Setting first run flag
