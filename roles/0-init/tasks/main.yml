@@ -58,8 +58,8 @@
   when: discovered_wan_iface != "none" and gw_active_test.stdout == "1"
 
 - name: Test for internet access
-  get_url: 
-    url: "{{ iiab_download_url }}/heart-beat.txt" 
+  get_url:
+    url: "{{ iiab_download_url }}/heart-beat.txt"
     dest: /tmp/heart-beat.txt
   ignore_errors: True
 #  async: 10
@@ -72,7 +72,7 @@
   when: not internet_access_test|failed and not disregard_network
 
 - name: Cleanup internet test file
-  file: 
+  file:
     path: /tmp/heart-beat.txt
     state: absent
 
@@ -159,7 +159,7 @@
   when: iiab_fqdn != ansible_fqdn
 
 - name: Add version section
-  ini_file: 
+  ini_file:
     dest: '{{ iiab_config_file }}'
     section: runtime
     option: '{{ item.option }}'
