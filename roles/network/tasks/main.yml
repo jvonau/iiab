@@ -5,8 +5,8 @@
 - include_tasks: detected_network.yml
   when: not installing
   tags:
-    - network
-    - network-discover
+  - network
+  - network-discover
 
 - name: RPi - reboot to AP post install - installed via wifi so the services are ready
   set_fact:
@@ -19,18 +19,18 @@
 - include_tasks: computed_network.yml
   when: not installing
   tags:
-    - network
-    - network-discover
+  - network
+  - network-discover
 
 - include_tasks: hostapd.yml
   tags:
-    - network
-    - AP
+  - network
+  - AP
 
 - name: RPi reboot to AP post install - installed via wifi - don't blow away current network
   set_fact:
-      no_net_restart: True
-      hostapd_enabled: False
+    no_net_restart: True
+    hostapd_enabled: False
   when: is_rpi and discovered_wireless_iface is defined and discovered_wired_iface != iiab_wan_iface
 
 ##### Start static ip address info for first run #####
@@ -40,9 +40,9 @@
 
 - include_tasks: hosts.yml
   tags:
-    - network
-    - hostname
-    - domain
+  - network
+  - hostname
+  - domain
 
 - name: Configuring wondershaper
   include_tasks: wondershaper.yml
@@ -50,37 +50,40 @@
   tags: wondershaper, network
 
 - name: (Re)Installing named
-  include_tasks: named.yml
+  include_role:
+    name: named
   when: FQDN_changed and iiab_stage|int == 9
 
 - name: (Re)Installing dhcpd
-  include_tasks: dhcpd.yml
+  include_role:
+    name: dhcpd
   when: FQDN_changed and iiab_stage|int == 9
 
 - name: (Re)Installing Squid
-  include_tasks: squid.yml
+  include_role: 
+    name: squid
   when: FQDN_changed and squid_install and iiab_stage|int == 9
 
 #### start services
 - include_tasks: avahi.yml
   tags:
-    - network
+  - network
 
 - include_tasks: computed_services.yml
   tags:
-    - network
-    - named
-    - dhcpd
-    - dnsmasq
-    - squid
+  - network
+  - named
+  - dhcpd
+  - dnsmasq
+  - squid
 
 - include_tasks: enable_services.yml
   tags:
-    - network
-    - named
-    - dhcpd
-    - dnsmasq
-    - squid
+  - network
+  - named
+  - dhcpd
+  - dnsmasq
+  - squid
 
 #### end services
 #### Start network layout
@@ -94,6 +97,7 @@
   include_tasks: NM-debian.yml
   tags:
   - network
+<<<<<<< HEAD
   when: is_debuntu and network_manager_active
 #and not installing
 
@@ -110,6 +114,10 @@
   - network
   when: is_debuntu and is_rpi
 #and not installing
+=======
+  when: is_debuntu
+#and not is_rpi  and not installing
+>>>>>>> net-last-merge
 
 - name: Not RPi, Not NetworkManager, Not systemd-networkd in use
   include_tasks: debian.yml
@@ -120,19 +128,21 @@
 
 # this is moving
 - name: Record iiab_wan_device
-  lineinfile: dest=/etc/iiab/iiab.env
-              regexp='^IIAB_WAN_DEVICE=*'
-              line='IIAB_WAN_DEVICE="{{ iiab_wan_iface }}"'
-              state=present
+  lineinfile:
+    dest: /etc/iiab/iiab.env
+    regexp: '^IIAB_WAN_DEVICE=*'
+    line: 'IIAB_WAN_DEVICE="{{ iiab_wan_iface }}"'
+    state: present
   when: not installing
   tags:
   - network
 
 - name: Record iiab_lan_device
-  lineinfile: dest=/etc/iiab/iiab.env
-              regexp='^IIAB_LAN_DEVICE=*'
-              line='IIAB_LAN_DEVICE="{{ iiab_lan_iface }}"'
-              state=present
+  lineinfile:
+    dest: /etc/iiab/iiab.env
+    regexp: '^IIAB_LAN_DEVICE=*'
+    line: 'IIAB_LAN_DEVICE="{{ iiab_lan_iface }}"'
+    state: present
   when: not installing
   tags:
   - network
