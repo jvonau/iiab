@@ -97,7 +97,6 @@
   include_tasks: NM-debian.yml
   tags:
   - network
-<<<<<<< HEAD
   when: is_debuntu and network_manager_active
 #and not installing
 
@@ -114,10 +113,6 @@
   - network
   when: is_debuntu and is_rpi
 #and not installing
-=======
-  when: is_debuntu
-#and not is_rpi  and not installing
->>>>>>> net-last-merge
 
 - name: Not RPi, Not NetworkManager, Not systemd-networkd in use
   include_tasks: debian.yml
