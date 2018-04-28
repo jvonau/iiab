@@ -21,7 +21,7 @@
   service: name={{ dhcp_service }}
            enabled=no
            state=stopped
-  when: is_debuntu
+  when: is_debuntu and not installing
 
 - name: Install systemd unit file to /etc/systemd/system/dhcpd.service
   template: src={{ item.src }}
