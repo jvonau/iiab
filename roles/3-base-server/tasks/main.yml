@@ -20,6 +20,7 @@
     name: mysql
   # has no "when: XXXXX_install" flag
   tags: base, mysql
+  when: not installing
 
 - name: Restart httpd
   service:
