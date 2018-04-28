@@ -93,3 +93,4 @@
 
 - name: Start named after copying files
   service: name={{ dns_service }} state=started
+  when: not installing
