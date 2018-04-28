@@ -37,7 +37,7 @@
   when: cups_enabled and not is_F18
 
 - name: Enable services for CUPS (Fedora 18, for XO laptops)
-  service:
+  systemd:
     name: cups
     state: started
     enabled: yes
