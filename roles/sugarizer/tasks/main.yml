@@ -88,7 +88,7 @@
     state: restarted
   with_items:
     - { name: sugarizer }
-  when: sugarizer_enabled
+  when: sugarizer_enabled and not installing
 
 - name: Disable services (all OS's)
   service:
@@ -97,7 +97,7 @@
     state: stopped
   with_items:
     - { name: sugarizer }
-  when: not sugarizer_enabled
+  when: not sugarizer_enabled and not installing
 
 - name: Add 'sugarizer' to list of services at /etc/iiab/iiab.ini
   ini_file:
