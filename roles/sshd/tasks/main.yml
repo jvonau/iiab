@@ -8,11 +8,19 @@
 - name: Enable sshd
   service: name={{ sshd_service }}
            enabled=yes
-           state=started
   when: sshd_enabled
+
+- name: Start sshd
+  service: name={{ sshd_service }}
+           state=started
+  when: sshd_enabled and not installing
 
 - name: Disable sshd
   service: name={{ sshd_service }}
            enabled=no
-           state=stopped
   when: not sshd_enabled
+
+- name: Disable sshd
+  service: name={{ sshd_service }}
+           state=stopped
+  when: not sshd_enabled and not installing
