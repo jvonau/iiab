@@ -24,15 +24,16 @@
 
 - name: Ask systemd to reread the unit files
   shell: systemctl daemon-reload
-  when: not kalite_installed.stat.exists
+  when: not kalite_installed.stat.exists and not installing
 
 - include_tasks: setup-f18.yml
   when: not kalite_installed.stat.exists and is_F18
 
 - include_tasks: setup.yml
-  when: not kalite_installed.stat.exists and not is_F18
+  when: not kalite_installed.stat.exists and not is_F18 and not installing
 
 - include_tasks: enable.yml
+  when: not installing
 
 - name: Add 'kalite' to list of services at /etc/iiab/iiab.ini
   ini_file:
