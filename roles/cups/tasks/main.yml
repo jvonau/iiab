@@ -39,7 +39,6 @@
   systemd:
     name: "{{ item }}"
     state: started
-    enabled: yes
   with_items:
     - cups
     - cups-browsed
@@ -72,7 +71,7 @@
   with_items:
     - cups
     - cups-browsed
-  when: not cups_enabled and not is_F18
+  when: not cups_enabled and not is_F18 and not installing
 
 - name: Disable services for CUPS (Fedora 18, for XO laptops)
   service:
