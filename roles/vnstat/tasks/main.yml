@@ -23,11 +23,16 @@
   shell: /usr/bin/vnstat -i {{ iiab_lan_iface }}
   when: iiab_lan_iface is defined
 
-- name: Start vnStat daemon via systemd
+- name: Enable vnStat daemon via systemd
   service:
     name: vnstat
     enabled: yes
+
+- name: Start vnStat daemon via systemd
+  service:
+    name: vnstat
     state: started
+  when: not installing 
 
 - name: Add 'vnstat' to list of services at /etc/iiab/iiab.ini
   ini_file:
