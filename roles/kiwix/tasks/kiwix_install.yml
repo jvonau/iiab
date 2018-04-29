@@ -138,14 +138,14 @@
     name: kiwix-serve
     enabled: yes
     state: restarted
-  when: kiwix_enabled
+  when: kiwix_enabled and not installing
 
 - name: Disable 'kiwix-serve' service
   service:
     name: kiwix-serve
     enabled: no
     state: stopped
-  when: not kiwix_enabled
+  when: not kiwix_enabled and not installing
 # IN THEORY: BOTH CRON ENTRIES BELOW *SHOULD* BE DELETED "when: not kiwix_enabled"
 
 # In the past kiwix-serve did not stay running, so we'd been doing this hourly.
