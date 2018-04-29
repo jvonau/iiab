@@ -8,7 +8,6 @@
   include_role:
     name: sshd
   # has no "when: XXXXX_install" flag
-  when: not installing
   tags: base, sshd
 
 - name: OPENVPN
@@ -49,6 +48,13 @@
     name: homepage
   # has no "when: XXXXX_install" flag
   tags: base, homepage
+
+- name: MYSQL
+  include_role:
+    name: mysql
+  # has no "when: XXXXX_install" flag
+  tags: base, mysql
+  when: not installing
 
 - name: POSTGRESQL
   include_role:

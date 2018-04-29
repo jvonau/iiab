@@ -15,13 +15,6 @@
   # has no "when: XXXXX_install" flag
   tags: base, iiab-admin
 
-- name: MYSQL
-  include_role:
-    name: mysql
-  # has no "when: XXXXX_install" flag
-  tags: base, mysql
-  when: not installing
-
 - name: Restart httpd
   service:
     name: "{{ apache_service }}"
