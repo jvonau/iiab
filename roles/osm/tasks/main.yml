@@ -136,6 +136,7 @@
 - name: Restart httpd service
   service: name={{ apache_service }}
            state=restarted
+  when: not installing
 
 - name: Add 'osm' to list of services at /etc/iiab/iiab.ini
   ini_file:
