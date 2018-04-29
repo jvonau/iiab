@@ -81,7 +81,8 @@
 - name: Create a MySQL database for Elgg - can be run more than once
   mysql_db:
     name: "{{ dbname }}"
-  register: create_elgg_database
+  register: create_elgg_database 
+  when: not installing
 
 - name: Create a user to access the Elgg database - can be run more than once
   mysql_user:
@@ -93,6 +94,7 @@
         - 127.0.0.1
         - ::1
         - localhost
+  when: not installing
 
 - name: Create file to load database
   template:
@@ -108,7 +110,7 @@
     name: "{{ dbname }}"
     state: import
     target: /tmp/elggdb.sql
-  when: create_elgg_database.changed
+  when: create_elgg_database.changed and not installing
 
 - name: Remove database dump after load
   file:
@@ -159,3 +161,4 @@
   service:
     name: "{{ apache_service }}"
     state: restarted
+  when: not installing
