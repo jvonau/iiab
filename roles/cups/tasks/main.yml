@@ -27,7 +27,16 @@
   when: cups_enabled and is_debuntu
 
 - name: Enable services for CUPS (OS's other than Fedora 18)
-  service:
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+  with_items:
+    - cups
+    - cups-browsed
+  when: cups_enabled and not is_F18
+
+- name: Start CUPS (OS's other than Fedora 18)
+  systemd:
     name: "{{ item }}"
     state: started
     enabled: yes
@@ -37,7 +46,7 @@
   when: cups_enabled and not is_F18
 
 - name: Enable services for CUPS (Fedora 18, for XO laptops)
-  systemd:
+  service:
     name: cups
     state: started
     enabled: yes
@@ -45,13 +54,21 @@
 
 - name: Permit headless admin of CUPS -- only works when CUPS daemon is running
   shell: "cupsctl --remote-admin"
-  when: cups_enabled
+  when: cups_enabled and not installing
 
 - name: Disable services for CUPS (OS's other than Fedora 18)
-  service:
+  systemd:
+    name: "{{ item }}"
+    enabled: no
+  with_items:
+    - cups
+    - cups-browsed
+  when: not cups_enabled and not is_F18
+
+- name: Disable services for CUPS (OS's other than Fedora 18)
+  systemd:
     name: "{{ item }}"
     state: stopped
-    enabled: no
   with_items:
     - cups
     - cups-browsed
