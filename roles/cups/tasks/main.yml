@@ -39,18 +39,13 @@
 - name: Enable services for CUPS (Fedora 18, for XO laptops)
   systemd:
     name: cups
+    state: started
     enabled: yes
   when: cups_enabled and is_F18
 
-- name: Start CUPS (Fedora 18, for XO laptops)
-  systemd:
-    name: cups
-    state: started
-  when: cups_enabled and is_F18 and not installing
-
 - name: Permit headless admin of CUPS -- only works when CUPS daemon is running
   shell: "cupsctl --remote-admin"
-  when: cups_enabled and not installing
+  when: cups_enabled
 
 - name: Disable services for CUPS (OS's other than Fedora 18)
   service:
