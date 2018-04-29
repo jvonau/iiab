@@ -128,7 +128,7 @@
 - name: Create a MySQL database for Nextcloud
   mysql_db:
     name: "{{ nextcloud_dbname }}"
-  when: mysql_enabled and nextcloud_enabled
+  when: mysql_enabled and nextcloud_enabled and not installing
 
 - name: Create a user to access the Nextcloud database
   mysql_user:
@@ -141,7 +141,7 @@
     - 127.0.0.1
     - ::1
     - localhost
-  when: mysql_enabled and nextcloud_enabled
+  when: mysql_enabled and nextcloud_enabled and not installing
 
 
 - name: Restart Apache, so it picks up the new aliases
@@ -149,12 +149,13 @@
     name: "{{ apache_service }}"
     state: restarted
 # when: nextcloud_enabled     # taken care of by nextcloud_enabled.yml below
-  when: not nextcloud_enabled
+  when: not nextcloud_enabled and not installing
 
 # Enable nextcloud by copying template to httpd config
 
 # following enables and disables
 - include_tasks: nextcloud_enabled.yml
+  when not installing
 
 - name: Add 'nextcloud' to list of services at /etc/iiab/iiab.ini
   ini_file:
