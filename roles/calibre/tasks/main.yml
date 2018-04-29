@@ -45,6 +45,7 @@
     name: calibre-serve
     state: stopped
     #enabled: no
+  when: not installing
 # register: command_result    # gist.github.com/tyrells/0a79681de339237cb04c
 #  failed_when: false          # Never Fail during "systemctl stop calibre-serve" (even if service doesn't exist!)
 # when: calibre_svc.stat.exists
@@ -58,7 +59,7 @@
 
 - name: Create database (required since Calibre 3.x) with a sample book
   include_tasks: create-db.yml
-  when: not calibre_db.stat.exists
+  when: not calibre_db.stat.exists and not installing
 
 # 4. WRAP UP: ENABLE CALIBRE SERVICE, http://box/books ETC
 
@@ -81,7 +82,7 @@
     name: calibre-serve
     enabled: yes
     state: started
-  when: calibre_enabled
+  when: calibre_enabled and not installing
   #async: 900
   #poll: 5
 
@@ -89,6 +90,7 @@
   service:
     name: "{{ apache_service }}"
     state: reloaded
+  when: not installing
 
 - name: Add 'calibre' to list of services at /etc/iiab/iiab.ini
   ini_file:
