@@ -85,6 +85,14 @@
   service:
     name: "{{ item.name }}"
     enabled: yes
+  with_items:
+    - { name: sugarizer }
+  when: sugarizer_enabled
+
+- name: Start services (all OS's)
+  service:
+    name: "{{ item.name }}"
+    enabled: yes
     state: restarted
   with_items:
     - { name: sugarizer }
@@ -94,6 +102,13 @@
   service:
     name: "{{ item.name }}"
     enabled: no
+  with_items:
+    - { name: sugarizer }
+  when: not sugarizer_enabled
+
+- name: Stop services (all OS's)
+  service:
+    name: "{{ item.name }}"
     state: stopped
   with_items:
     - { name: sugarizer }
