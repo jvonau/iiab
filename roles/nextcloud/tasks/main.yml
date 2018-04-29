@@ -143,7 +143,6 @@
     - localhost
   when: mysql_enabled and nextcloud_enabled and not installing
 
-
 - name: Restart Apache, so it picks up the new aliases
   service:
     name: "{{ apache_service }}"
@@ -155,7 +154,7 @@
 
 # following enables and disables
 - include_tasks: nextcloud_enabled.yml
-  when not installing
+  when: not installing
 
 - name: Add 'nextcloud' to list of services at /etc/iiab/iiab.ini
   ini_file:
