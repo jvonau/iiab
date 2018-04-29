@@ -91,11 +91,13 @@
   service:
     state: started
     name: "{{ mysql_service }}"
+  when: not installing
 
 - name: Create MySQL wordpress database
   mysql_db:
     name: "{{ wp_db_name }}"
     state: present
+  when: not installing
 
 - name: Create MySQL wordpress database user
   mysql_user:
@@ -103,6 +105,7 @@
     password: "{{ wp_db_user_password }}"
     priv: "{{ wp_db_name }}.*:ALL,GRANT"
     state: present
+  when: not installing
 
 - name: Copy WordPress config file
   template:
@@ -134,6 +137,7 @@
   service:
     name: "{{ apache_service }}"
     state: restarted
+  when: not installing
 
 - name: Add 'wordpress' to list of services at /etc/iiab/iiab.ini
   ini_file:
