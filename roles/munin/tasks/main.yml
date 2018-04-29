@@ -46,8 +46,13 @@
   service:
     name: munin-node
     enabled: yes
-    state: started
   when: munin_enabled
+
+- name: Start munin-node service
+  service:
+    name: munin-node
+    state: started
+  when: munin_enabled and not installing
 
 - name: Enable Apache lookup (debuntu)
   file:
@@ -67,8 +72,13 @@
   service:
     name: munin-node
     enabled: no
-    state: stopped
   when: not munin_enabled
+
+- name: Disable munin-node service when it becomes disabled
+  service:
+    name: munin-node
+    state: stopped
+  when: not munin_enabled and not installing
 
 - name: If MySQL is enabled, let Munin monitor it
   copy:
