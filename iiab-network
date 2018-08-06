@@ -1,9 +1,6 @@
 #!/bin/bash
 # running from a git repo
 # ansible files exist
-CWD=`pwd`
-export ANSIBLE_LOG_PATH="$CWD/iiab-network.log"
-
 if [ ! -f iiab-network.yml ]; then
     echo "iiab-network.yml not found in current directory."
     echo "Please rerun this command from the top level of the git repo."
@@ -23,21 +20,25 @@ if [ -f /etc/iiab/iiab.env ]; then
     source /etc/iiab/iiab.env
 fi
 
-echo "Ansible will now run iiab-network.yml -- log file is iiab-network.log"
+WHEN=`date +%F-%H-%M`
+LOG=iiab-network.log.$WHEN
+CWD=`pwd`
+export ANSIBLE_LOG_PATH="$CWD/$LOG"
+
+echo "Ansible will now run iiab-network.yml, log file is $LOG"
 Start=`date`
 ansible-playbook -i ansible_hosts iiab-network.yml --connection=local
 End=`date`
 
-
-# Record critical diagnostics to [/opt/iiab/iiab/]iiab-network.log
-echo >> iiab-network.log
+# Record critical diagnostics to [/opt/iiab/iiab/]$LOG
+echo >> $LOG
 
 # redhat path
 # Paul Armstrong's Shell Style Guide (https://google.github.io/styleguide/shell.xml)
 # prefers "if [[ ... ]]; then" for REGEXP's.  Many others prefer "if [ ... ];" then.
 # Each approach is sometimes necessary in my experience, working differently indeed.
 if [ "$OS" == "centos" ] || [ "$OS" == "fedora" ]; then
-    ls -la /etc/sys*/net*/ifcfg* >> iiab-network.log
+    ls -la /etc/sys*/net*/ifcfg* >> $LOG
 fi
 
 # Ubuntu desktop/others might be using NM (NetworkManager) - split out.
@@ -48,18 +49,18 @@ fi
 #if [[ `which nmcli` ]]; then            # "which" misses built-in commands like cd, and is RISKY per https://stackoverflow.com/questions/592620/check-if-a-program-exists-from-a-bash-script
 #if [[ `type -P nmcli` ]]; then          # "type -P" isn't POSIX compliant; it misses built-in commands like "cd"
 if [[ `command -v nmcli` ]]; then        # "command -v" is POSIX compliant; it catches built-in commands like "cd"
-    nmcli d >> iiab-network.log
-    echo >> iiab-network.log
-    nmcli c >> iiab-network.log
+    nmcli d >> $LOG
+    echo >> $LOG
+    nmcli c >> $LOG
 fi
 
-ip r >> iiab-network.log
-brctl show >> iiab-network.log
-echo >> iiab-network.log
-echo "iiab-network run start: $Start" >> iiab-network.log
-echo "iiab-network run end: $End" >> iiab-network.log
-echo >> iiab-network.log
-echo >> iiab-network.log
+ip r >> $LOG
+brctl show >> $LOG
+echo >> $LOG
+echo "iiab-network run start: $Start" >> $LOG
+echo "iiab-network run end: $End" >> $LOG
+echo >> $LOG
+echo >> $LOG
 
 
 # Put the same diagnostics on screen, for live operator
