@@ -63,14 +63,15 @@ dns_jail_enabled: False
 services_externally_visible: False
 
 # DNS / name resolution
-dhcpd_install: True
+# below overridden by /etc/iiab/local_vars.yml
+dhcpd_install: False
 dhcpd_enabled: False
-#dhcp_service: ????                 # Set in individual OS's /opt/iiab/iiab/vars/<OS>.yml for use in roles/network/tasks/dhcpd.yml
-#dhcp_service2: "dhcpd disabled"    # Moved to roles/network/tasks/computed_services.yml as community transitions from named/BIND to dnsmasq (PR #1202)
-named_install: True
+#dhcp_service: ???? # Set in individual OS's /opt/iiab/iiab/vars/<OS>.yml for use in roles/network/tasks/dhcpd.yml
+named_install: False
 named_enabled: False
-dnsmasq_enabled: True
-dnsmasq_install: True
+dnsmasq_install: False
+# and can be overridden when set to True by network role when DHCP server is not required.
+dnsmasq_enabled: False
 
 # Python-based Captive Portal, that @m-anish & @jvonau experimented with in
 # July 2018 (https://github.com/iiab/iiab/pull/870) and that @georgejhunt
