@@ -15,6 +15,11 @@
   # has no "when: XXXXX_install" flag
   tags: base, mysql
 
+- name: Install dnsmasq
+  include_tasks: roles/network/tasks/dnsmasq.yml
+  when: dnsmasq_install | bool
+  tags: base, domain, dnsmasq, network
+
 - name: Create a Python interface to iiab.env
   template:
     src: roles/1-prep/templates/iiab_env.py.j2
