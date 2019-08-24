@@ -81,9 +81,27 @@
   when: usb_lib_install | bool
   tags: usb-lib
 
+- name: Give {{ apache_user }} (per variable apache_user) permission to poweroff, installing /etc/sudoers.d/020_apache_poweroff from template
+  template:
+    src: roles/httpd/templates/020_apache_poweroff.j2
+    dest: /etc/sudoers.d/020_apache_poweroff
+    mode: 0755
+  when: apache_allow_sudo | bool
+
+- name: Remove {{ apache_user }} (per variable apache_user) permission to poweroff, removing /etc/sudoers.d/020_apache_poweroff
+  file:
+    path: /etc/sudoers.d/020_apache_poweroff
+    state: absent
+  when: not apache_allow_sudo
+
 - name: Run /usr/bin/iiab-refresh-wiki-docs (scraper script) to create http://box/info offline documentation.  (This script was installed at the beginning of Stage 3 = roles/3-base-server/tasks/main.yml, which ran Apache playbook = roles/httpd/tasks/main.yml)
   command: /usr/bin/iiab-refresh-wiki-docs
   when: not nodocs
+
+- name: Restart Apache systemd service ({{ apache_service }})
+  systemd:
+    name: "{{ apache_service }}"
+    state: restarted
 
 - name: Recording STAGE 4 HAS COMPLETED ==================
   lineinfile:
