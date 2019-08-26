@@ -4,6 +4,11 @@ INVENTORY="ansible_hosts"
 PLAYBOOK="run-one-role.yml"
 ARGS=""
 CWD=`pwd`
+if [ ! -f /etc/ansible/facts.d/local_facts.fact ]; then
+    mkdir -p /etc/ansible/facts.d
+fi
+cp ./scripts/local_facts.fact /etc/ansible/facts.d/local_facts.fact
+
 if [ "$1" == "--reinstall" ]; then
     ARGS="$ARGS --extra-vars reinstall=True"
     shift 1
