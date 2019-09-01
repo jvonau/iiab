@@ -45,6 +45,12 @@
   # has no "when: XXXXX_install" flag
   tags: base, homepage
 
+- name: MYSQL
+  include_role:
+    name: mysql-setup
+  when: mysql_install | bool
+  tags: base, mysql
+
 - name: POSTGRESQL
   include_role:
     name: postgresql
