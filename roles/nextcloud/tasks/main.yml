@@ -1,3 +1,7 @@
+- name: Provision NextCloud's Mysql DB
+  include_tasks: prov-db.yml
+  when: nextcloud_install and not installing
+
 - name: Does /opt/nextcloud/version.php exist?
   stat:
     path: "{{ nextcloud_prefix }}/nextcloud/version.php"
@@ -15,3 +19,4 @@
 
 - name: Enables or disable Nextcloud!
   include_tasks: enable_or_disable.yml
+  when: nextcloud_install or nextcloud_installed is defined
