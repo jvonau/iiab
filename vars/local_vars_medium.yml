@@ -206,7 +206,7 @@ mediawiki_enabled: False
 ejabberd_install: False
 ejabberd_enabled: False
 
-elgg_install: False
+elgg_install: True
 elgg_enabled: False
 
 # Gitea (lightweight self-hosted "GitHub") from https://gitea.io
@@ -228,7 +228,7 @@ nodered_enabled: False
 # Store your docs, calendar, contacts & photos on your local server not cloud!
 # If using WordPress intensively, set apache_high_php_limits in 3-BASE-SERVER
 nextcloud_install: True
-nextcloud_enabled: True
+nextcloud_enabled: False
 nextcloud_allow_public_ips: False
 # Configuration tips for IPv4 access controls and tuning RAM/resources:
 # https://github.com/iiab/iiab/blob/master/roles/nextcloud/README.md
@@ -241,7 +241,7 @@ asterisk_chan_dongle: False
 
 # If using WordPress intensively, set apache_high_php_limits in 3-BASE-SERVER
 wordpress_install: True
-wordpress_enabled: True
+wordpress_enabled: False
 
 
 # 7-EDU-APPS
