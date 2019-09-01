@@ -95,6 +95,7 @@
   set_fact:
     mysql_install: True
     mysql_enabled: True
+  when: nextcloud_enabled or phpmyadmin_enabled or wordpress_enabled
 
 # We decided to enable mysql unconditionally.
 #  when: elgg_enabled or rachel_enabled or owncloud_enabled or phpmyadmin_enabled or wordpress_enabled or iiab_menu_install
