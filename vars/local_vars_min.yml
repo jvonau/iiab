@@ -139,8 +139,6 @@ apache_allow_sudo: True
 
 # roles/mysql runs here (mandatory)
 
-mysql_install: True
-mysql_enabled: False
 
 # 4-SERVER-OPTIONS
 

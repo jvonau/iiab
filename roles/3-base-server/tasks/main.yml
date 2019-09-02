@@ -9,6 +9,12 @@
   # has no "when: XXXXX_install" flag
   tags: base, httpd
 
+- name: MYSQL
+  include_role:
+    name: mysql
+  # has no "when: XXXXX_install" flag
+  tags: base, mysql
+
 - name: Install dnsmasq
   include_tasks: roles/network/tasks/dnsmasq.yml
   when: dnsmasq_install | bool
