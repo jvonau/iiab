@@ -6,7 +6,7 @@ Requires=mariadb.service
 [Service]
 Type=oneshot
 WorkingDirectory=/opt/iiab/iiab
-ExecStart=/opt/iiab/iiab/runrole mysql-setup /opt/iiab/iiab/mysql.log
+ExecStart=/opt/iiab/iiab/runrole db-setup /opt/iiab/iiab/db-setup.log
 ExecStartPost=/bin/systemctl disable iiab-setup-db.service
 
 [Install]
