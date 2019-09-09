@@ -77,7 +77,9 @@
   when: kolibri_provision | bool
 
 - name: Add 'kolibri_installed' variable values to {{ iiab_installed }}
-  ini_file:
-    path: "{{ iiab_installed }}"
-    value: kolibri_installed
+  lineinfile:
+    dest: "{{ iiab_installed }}"
+    regexp: '^kolibri_installed'
+    line: 'kolibri_installed'
+    state: present
 
