@@ -24,6 +24,7 @@
   package:
     name:
 #      - avahi-discover
+      - haveged
       - avahi-daemon
       - exfat-fuse
       - exfat-utils
