@@ -10,9 +10,9 @@
 - name: FORCE INSTALL OR REINSTALL OR UPGRADE IF {{ nextcloud_prefix }}/nextcloud/version.php DOESN'T EXIST
   #set_fact:
   #  nextcloud_force_install: True
-  include_tasks: install.yml
+  include_tasks: install2.yml
   when: nextcloud_install and (not nextcloud_installed is defined or not nextcloud_page.stat.exists)
 
-- name: Enables or disable Nextcloud!
-  include_tasks: enable_or_disable.yml
-  when: nextcloud_install or nextcloud_installed is defined
+#- name: Enables or disable Nextcloud!
+#  include_tasks: enable_or_disable.yml
+#  when: nextcloud_install or nextcloud_installed is defined
