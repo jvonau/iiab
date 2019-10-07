@@ -101,5 +101,5 @@
   lineinfile:
     dest: "{{ iiab_installed }}"
     regexp: '^lokole_installed'
-    line: 'lokole_installed'
+    line: 'lokole_installed: True'
     state: present
