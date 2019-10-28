@@ -5,7 +5,7 @@
     path: "{{ iiab_state_file }}"
     state: touch
 
-- name: MYSQL setup
+- name: MySQL setup
   include_role:
     name: mysql-enable
   tags: base, mysql
