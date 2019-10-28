@@ -4,7 +4,7 @@
   include_tasks: install.yml
   when: wordpress_install and not wordpress_installed is defined
 
-- name: Provision MySql DB for WordPress
+- name: Provision MySQL DB for WordPress
   include_tasks: setup.yml
   when: wordpress_install and not installing
 
