@@ -131,4 +131,4 @@
 
 - name: Provison the DB
   include_tasks: setup.yml
-  when: not installing | bool
+  when: not installing
