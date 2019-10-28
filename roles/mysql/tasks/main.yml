@@ -115,7 +115,7 @@
     # line: "TimeoutStartSec=180"
   when: mariadb_unit_file.stat.exists
 
-- name: Use custom systemd unit file to call runrole db-setup on boot
+- name: Use custom systemd unit file (iiab-setup-db.service) to call runrole db-setup on boot
   template:
     src: iiab-setup-db.service
     dest: /etc/systemd/system/iiab-setup-db.service
