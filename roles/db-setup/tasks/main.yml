@@ -1,4 +1,4 @@
-- name: Provision MySql
+- name: Provision MySQL
   include_tasks: roles/mysql/tasks/setup.yml
   when: mysql_install | bool
 
