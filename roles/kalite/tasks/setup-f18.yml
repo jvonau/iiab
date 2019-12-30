@@ -12,3 +12,10 @@
 
 - name: Stop kalite server started in previous step because we use systemd
   command: "/usr/bin/su {{ kalite_user }} -c '{{ kalite_root }}/bin/kalite stop'"
+
+- name: Add 'kalite_installed' variable values to {{ iiab_state_file }}
+  lineinfile:
+    dest: "{{ iiab_state_file }}"
+    regexp: '^kalite_installed'
+    line: 'kalite_installed: True'
+    state: present
