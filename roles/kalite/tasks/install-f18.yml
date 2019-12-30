@@ -74,3 +74,5 @@
     - { src: 'f18/kalite-serve.service.j2', dest: '/etc/systemd/system/kalite-serve.service', mode: '0644'}
     - { src: 'f18/kalite-cron.service.j2', dest: '/etc/systemd/system/kalite-cron.service', mode: '0644'}
     - { src: 'f18/iiab_cronservectl.sh.j2', dest: '{{ kalite_root }}/scripts/iiab_cronservectl.sh', mode: '0755'}
+
+- include_tasks: setup-f18.yml

@@ -81,3 +81,5 @@
     path: /usr/local/kalite/venv/local/lib/python2.7/site-packages/kalite/packages/dist/ifcfg/parser.py
     regexp: 'a-zA-Z0-9'
     replace: 'a-zA-Z0-9\-'
+
+- include_tasks: setup.yml
