@@ -30,7 +30,6 @@
   include_tasks: install.yml
   when: mysql_installed is undefined
 
-
 - name: Enable & Start MySQL ({{ mysql_service }}) systemd service, if mysql_enabled
   systemd:
     name: "{{ mysql_service }}"
