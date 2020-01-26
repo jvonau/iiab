@@ -17,6 +17,10 @@
   include_tasks: roles/network/tasks/squid.yml
   when: squid_install | bool
 
+- name: Enable/Disable sshd daemon
+  include_role:
+    name: sshd
+
 - name: Install iiab python files
   include_role:
     name: pylib
