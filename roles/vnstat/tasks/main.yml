@@ -13,6 +13,7 @@
 
 - name: Create database for WAN to collect vnStat data
   shell: /usr/bin/vnstat -i {{ iiab_wan_iface }}
+  when: iiab_wan_iface is defined
 
 - name: Create database for LAN to collect vnStat data if not appliance config
   shell: /usr/bin/vnstat -i {{ iiab_lan_iface }}
