@@ -96,11 +96,7 @@
   template:
     src: elgg.conf
     dest: "/etc/{{ apache_conf_dir }}/elgg.conf"
-
-
-- name: Set up Elgg's MySQL database
-  include_tasks: setup.yml
-
+  when: apache_install | bool
 
 # RECORD Elgg AS INSTALLED
 
