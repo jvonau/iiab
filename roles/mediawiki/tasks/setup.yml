@@ -24,7 +24,7 @@
     --installdbpass={{ mediawiki_db_user_password }}
     --dbuser={{ mediawiki_db_user }}
     --dbpass={{ mediawiki_db_user_password }}
-    --scriptpath=/mwlink
+    --scriptpath={{ mediawiki_symlink }}
     --lang=en
     --pass={{ mediawiki_admin_user_password }}
     "{{ mediawiki_site_name }}"
