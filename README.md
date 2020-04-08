@@ -13,7 +13,9 @@ Advanced networking features
 
 Feel free to clone and file bugs reports
 
-Install testing release using the 1-line installer at: TBA
+Install this testing branch using this 1-line installer: 
+
+`curl https://raw.githubusercontent.com/jvonau/iiab-factory/pi-gen/install.txt | sudo bash`
 
 # Internet-in-a-Box (IIAB)
 
