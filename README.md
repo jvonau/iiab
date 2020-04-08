@@ -5,10 +5,14 @@
 This is my testing branch of Internet-in-a-Box (IIAB) bug fixes and deployment of advanced features not available in IIAB yet. This branch undergos continuous updating as bugs are found and resolved and features are moved in IIAB proper. There is no assurance that bug fixes and new features in this branch get merged into IIAB therefore testing is soley at your your own risk. 
 
 This branch exists to support:
-The use of raspbian's pi-gen image creation tool
-Advanced networking features 
 
-Feel free to clone and file bugs reports 
+The use of raspbian's pi-gen image creation tool
+
+Advanced networking features
+
+
+Feel free to clone and file bugs reports
+
 Install testing release using the 1-line installer at: TBA
 
 # Internet-in-a-Box (IIAB)
