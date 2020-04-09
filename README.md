@@ -1,5 +1,22 @@
 *Sharing the World's Free Knowledge*
 
+## Versions
+
+This is my testing branch of Internet-in-a-Box (IIAB) bug fixes and deployment of advanced features not available in IIAB yet. This branch undergos continuous updating as bugs are found and resolved and features are moved in IIAB proper. There is no assurance that bug fixes and new features in this branch get merged into IIAB therefore testing is soley at your your own risk. 
+
+This branch exists to support:
+
+The use of raspbian's pi-gen image creation tool
+
+Advanced networking features
+
+
+Feel free to clone and file bugs reports
+
+Install this testing branch using this 1-line installer: 
+
+`curl https://raw.githubusercontent.com/jvonau/iiab-factory/pi-gen/install.txt | sudo bash`
+
 # Internet-in-a-Box (IIAB)
 
 [Internet-in-a-Box (IIAB)](http://internet-in-a-box.org) is a "learning hotspot" that brings the Internet's crown jewels
@@ -43,12 +60,3 @@ To learn more about our open community architecture for "offline" education, sta
 
 *Thank you for helping us enable offline access to the Internet's free/open knowledge jewels, as well as "Sneakernet-of-Alexandria" distribution of local/indigenous content, when mass media channels do not serve grassroots voices.*
 
-## Versions
-
-Pre-releases of Internet-in-a-Box (IIAB) undergo continuous QA / continuous deployment and are strongly recommended.
-
-Install our latest pre-release using the 1-line installer at: [download.iiab.io](http://download.iiab.io/)
-
-You can also consider the <!--latest Internet-in-a-Box (IIAB)--> official releases at: [github.com/iiab/iiab/releases](https://github.com/iiab/iiab/releases)
-
-For older versions, see: [github.com/xsce](http://github.com/xsce), [schoolserver.org](http://schoolserver.org)
