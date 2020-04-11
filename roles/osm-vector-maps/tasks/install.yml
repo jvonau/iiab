@@ -11,11 +11,11 @@
     url: "{{ iiab_map_url }}/assets/regions.json"    # http://download.iiab.io/content/OSM/vector-tiles/maplist/hidden
     dest: "{{ vector_map_path }}/maplist/assets/"    # /library/www/osm-vector-maps
 
-- name: Symlink catalog {{ doc_root }}/common/assets/regions.json -> {{ vector_map_path }}/maplist/assets/regions.json
-  file:
+- name: Copy catalog {{ doc_root }}/common/assets/regions.json -> {{ vector_map_path }}/maplist/assets/regions.json
+  copy:
     src: "{{ vector_map_path }}/maplist/assets/regions.json"    # /library/www/osm-vector-maps
     dest: "{{ doc_root }}/common/assets/regions.json"    # /library/www/html
-    state: link
+    force: no
 
 - name: Download the JavaScript bundle with OpenLayers (main.js) into {{ vector_map_path }}/maplist/, for test page http://box/maps/maplist
   get_url:
