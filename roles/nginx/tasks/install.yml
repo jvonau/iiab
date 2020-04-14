@@ -16,14 +16,13 @@
 
 - name: Install required and helper packages for NGINX
   package:
-    name: "{{ item }}"
+    name:
+      - nginx-extras
+      - uwsgi
+      - uwsgi-plugin-python3
+      - php-fpm
+      - libnginx-mod-http-subs-filter
     state: present
-  with_items:
-    - nginx-extras
-    - uwsgi
-    - uwsgi-plugin-python3
-    - php-fpm
-    - libnginx-mod-http-subs-filter
 
 - name: Add user '{{ apache_user }}' to shadow group, so it can authenticate Admin Console
   user:
