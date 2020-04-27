@@ -1,7 +1,8 @@
 #!/bin/bash
 
 {% if wifi_up_down %}
-systemctl enable hostapd
+systemctl enable clone-wifi.service
+systemctl enable wifi-test.service
 sed -i -e "s/^HOSTAPD_ENABLED.*/HOSTAPD_ENABLED=True/" {{ iiab_env_file }}
 echo -e "\nPlease reboot to activate hostapd feature.\n"
 exit 0

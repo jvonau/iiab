@@ -1,8 +1,12 @@
 #!/bin/bash
 
 {% if wifi_up_down %}
+systemctl disable clone-wifi.service
+systemctl disable wifi-test.service
 systemctl disable hostapd
 systemctl stop hostapd
+systemctl stop clone-wifi.service
+
 sed -i -e "s/^HOSTAPD_ENABLED.*/HOSTAPD_ENABLED=False/" {{ iiab_env_file }}
 echo " IIAB hotspot access point Disabled"
 exit 0
