@@ -22,5 +22,11 @@ systemctl disable hostapd
 systemctl stop hostapd
 sed -i -e "s/^HOSTAPD_ENABLED.*/HOSTAPD_ENABLED=False/" {{ iiab_env_file }}
 echo " IIAB hotspot access point Disabled"
+{% if wifi_up_down %}
 exit 0
+{% else %}
+sed -i -e "s|managed=0|managed=1|" /etc/NetworkManager/conf.d/wifi-manage.conf
+echo -e "\nPlease reboot to enable upstream WiFi access.\n"
+exit 0
+{% endif %}
 {% endif %}

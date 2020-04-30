@@ -29,9 +29,8 @@ sed -i -e "s/^HOSTAPD_ENABLED.*/HOSTAPD_ENABLED=True/" {{ iiab_env_file }}
 echo -e "\nPlease reboot to activate hostapd feature.\n"
 exit 0
 {% else %}
-systemctl start hostapd
-systemctl restart dnsmasq
-echo -e "\nPlease consider rebooting now.\n"
+sed -i -e "s|managed=1|managed=0|" /etc/NetworkManager/conf.d/wifi-manage.conf
+echo -e "\nPlease reboot to activate hostapd feature.\n"
 exit 0
 {% endif %}
 {% endif %}
