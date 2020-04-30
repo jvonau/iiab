@@ -50,12 +50,12 @@
   with_items:
     - "{{ netplan.stdout_lines }}"
 
-- name: Supply netplan template
-  template:
-    dest: /etc/netplan/01-iiab-config.yaml
-    src: network/netplan.j2
-    backup: no
-  when: iiab_wan_iface != discovered_wireless_iface and wan_ip != "dhcp"
+#- name: Supply netplan template
+#  template:
+#    dest: /etc/netplan/01-iiab-config.yaml
+#    src: network/netplan.j2
+#    backup: no
+#  when: iiab_wan_iface != discovered_wireless_iface and wan_ip != "dhcp"
 
 # should blow up here if we messed up the yml file
 #- name: Generate netplan config
