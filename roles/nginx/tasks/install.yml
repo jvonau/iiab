@@ -49,13 +49,6 @@
     msg: roles/nginx/tasks/homepage.yml will run LATER (invoked by roles/www_options/tasks/main.yml) SO THAT NGINX CAN REDIRECT http://box TO http://box{{ iiab_home_url }} (based on var iiab_home_url)
 # - include_tasks: roles/nginx/tasks/homepage.yml
 
-- name: Restart php{{ php_version }}-fpm systemd service
-  systemd:
-    name: "php{{ php_version }}-fpm"
-    state: restarted
-  #when: nginx_enabled | bool
-
-
 # RECORD NGINX AS INSTALLED
 
 - name: "Set 'nginx_installed: True'"
