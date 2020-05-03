@@ -25,6 +25,11 @@
     enabled: true
   when: apache_installed is defined and apache_enabled    # or not nginx_enabled
 
+- name: Restart php{{ php_version }}-fpm systemd service
+  systemd:
+    name: "php{{ php_version }}-fpm"
+    state: restarted
+  when: nginx_enabled | bool
 
 - name: Enable & (Re)Start 'nginx' systemd service, if nginx_enabled
   systemd:
