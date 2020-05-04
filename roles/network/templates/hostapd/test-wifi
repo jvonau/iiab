@@ -35,6 +35,7 @@ fi
 echo "ssid is $SSID"
 if [[ $SSID == "" ]]; then
     echo "Couldn't find ssid to use exiting"
+    systemctl start hostapd
     exit 0
 fi
 # might need to start the dbus wpa_supplicant
