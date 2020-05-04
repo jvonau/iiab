@@ -140,6 +140,7 @@
 
 - name: Disable ap0 related services
   systemd:
+    name: "{{ item }}"
     enabled: no
   with_items:
     - clone-wifi.service
