@@ -32,7 +32,8 @@ if [ -f /etc/iiab/iiab.env ]; then
        SSID=$CLIENT_SSID
     fi
 fi
-if [ $SSID == "NA" ]; then
+echo "ssid is $SSID"
+if [[ $SSID == "" ]]; then
     echo "Couldn't find ssid to use exiting"
     exit 0
 fi
