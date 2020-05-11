@@ -29,7 +29,7 @@
   systemd:
     name: "php{{ php_version }}-fpm"
     state: restarted
-  when: nginx_enabled | bool
+  when: (nginx_high_php_limits or moodle_install or nextcloud_install or pbx_install or wordpress_install)
 
 - name: Enable & (Re)Start 'nginx' systemd service, if nginx_enabled
   systemd:
