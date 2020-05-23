@@ -14,3 +14,4 @@
   systemd:
     name: nginx
     state: restarted
+  when: installing is defined

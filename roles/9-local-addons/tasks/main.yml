@@ -30,6 +30,11 @@
     name: calibre-web
   when: calibreweb_install | bool
 
+- name: Restarting NGINX APACHE php-fpm
+  include_role:
+    name: nginx
+  when: installing is undefined
+
 - name: Recording STAGE 9 HAS COMPLETED ====================
   lineinfile:
     path: "{{ iiab_env_file }}"

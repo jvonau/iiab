@@ -70,7 +70,7 @@
       name: "php{{ php_version }}-fpm"
       state: restarted
 
-  when: (nginx_high_php_limits or moodle_install or nextcloud_install or pbx_install or wordpress_install) and nginx_enabled    # 3-STANZA BLOCK ENDS
+  when: (nginx_high_php_limits or moodle_install or nextcloud_install or pbx_install or wordpress_install) and nginx_enabled and installing is defined   # 3-STANZA BLOCK ENDS
 
 
 # 'Is a "Rapid Power Off" button possible for low-electricity environments?'
@@ -98,20 +98,20 @@
 
 - name: Run /usr/bin/iiab-refresh-wiki-docs (scraper script) to create http://box/info offline documentation.  (This script was installed in Stage 3 = roles/3-base-server/tasks/main.yml, which ran roles/www_base/tasks/main.yml)
   command: /usr/bin/iiab-refresh-wiki-docs
-  when: internet_available and not nodocs
+  when: internet_available and not nodocs and installing is defined
 
 
 - name: (Re)Start '{{ apache_service }}' systemd service, if installed & enabled
   systemd:
     name: "{{ apache_service }}"    # apache2 on debuntu
     state: restarted
-  when: apache_installed is defined and apache_enabled
+  when: apache_installed is defined and apache_enabled and installing is defined
 
 - name: (Re)Start 'nginx' systemd service, if nginx_enabled
   systemd:
     name: nginx
     state: restarted
-  when: nginx_enabled | bool
+  when: nginx_enabled | bool and installing is defined
 
 
 # RECORD www_options AS INSTALLED
