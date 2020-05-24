@@ -12,6 +12,7 @@ ExecStartPre=/bin/touch /run/iiab-provision
 ExecStart={{ iiab_dir }}/iiab-configure
 ExecStartPost=/bin/systemctl disable iiab-provision.service
 ExecStartPost=/bin/rm /run/iiab-provision
+ExecStartPost=/usr/bin/git checkout master
 
 [Install]
 WantedBy=multi-user.target
