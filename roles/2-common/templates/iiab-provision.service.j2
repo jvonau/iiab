@@ -13,6 +13,8 @@ ExecStart={{ iiab_dir }}/iiab-configure
 ExecStartPost=/bin/systemctl disable iiab-provision.service
 ExecStartPost=/bin/rm /run/iiab-provision
 ExecStartPost=/usr/bin/git checkout master
+ExecStartPost=/bin/systemctl restart hostapd.service
+ExecStartPost=/bin/systemctl restart dnsmasq.service
 
 [Install]
 WantedBy=multi-user.target
