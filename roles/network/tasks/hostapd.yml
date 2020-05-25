@@ -12,7 +12,7 @@
 - name: Detect current Wifi channel
   shell: iw {{ discovered_wireless_iface }} info | grep channel | cut -d' ' -f2
   register: current_host_channel
-  when: discovered_wireless_iface != "none"
+  when: imaging is undefined and discovered_wireless_iface != "none"
 
 - name: Setting WiFi channel to {{ current_host_channel.stdout }}
   set_fact:
