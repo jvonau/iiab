@@ -12,7 +12,7 @@ ExecStartPre=/bin/touch /run/iiab-provision
 ExecStart={{ iiab_dir }}/iiab-configure
 ExecStartPost=/bin/systemctl disable iiab-provision.service
 ExecStartPost=/bin/rm /run/iiab-provision
-ExecStartPost=/usr/bin/git checkout master
+ExecStartPost=/usr/bin/git checkout release-7.1
 ExecStartPost=/bin/systemctl restart hostapd.service
 ExecStartPost=/bin/systemctl restart dnsmasq.service
 
