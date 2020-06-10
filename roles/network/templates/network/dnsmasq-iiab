@@ -1,5 +1,5 @@
 #IIAB
-bind-interfaces
+bind-dynamic
 # Wan nameserver if manually set
 {% if wan_nameserver is not none %}
 no-resolv
