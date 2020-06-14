@@ -16,7 +16,7 @@
 
 - name: Create /tmp/elggdb.sql from template, to load database
   template:
-    src: elggdb.sql.j2
+    src: roles/elgg/templates/elggdb.sql.j2
     dest: /tmp/elggdb.sql
 
 # elggdb.sql obtained with mysqldump --skip-add-drop-table elggdb > elggdb.sql
