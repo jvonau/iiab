@@ -1,3 +1,9 @@
+- include_vars: roles/mysql/defaults/main.yml
+- include_vars: roles/elgg/defaults/main.yml
+- include_vars: roles/mediawiki/defaults/main.yml
+- include_vars: roles/nextcloud/defaults/main.yml
+- include_vars: roles/wordpress/defaults/main.yml
+
 - name: Provision MySql
   include_tasks: roles/mysql/tasks/prov-db.yml
 
