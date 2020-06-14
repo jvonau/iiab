@@ -4,6 +4,9 @@
     path: "{{ iiab_env_file }}"
   register: NewInstall
 
+- debug:
+    var: iiab_provision
+
 - name: Set first_run flag
   set_fact:
     first_run: True

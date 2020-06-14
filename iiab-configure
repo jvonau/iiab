@@ -5,7 +5,7 @@ PLAYBOOK=iiab-from-cmdline.yml
 CWD=`pwd`
 IIAB_STATE_FILE=/etc/iiab/iiab_state.yml
 IIAB_ENV_FILE=/etc/iiab/iiab.env
-
+ARGS="$@"
 if [ ! -f $PLAYBOOK ]; then
     echo -e "\nEXITING: IIAB Playbook ""$PLAYBOOK"" not found."
     echo -e "\nPlease run this in /opt/iiab/iiab (top level of the git repo)."
@@ -50,4 +50,4 @@ fi
 
 export ANSIBLE_LOG_PATH="$CWD/iiab-configure.log"
 ansible -m setup -i $INVENTORY localhost ${ARGS} --connection=local | grep python
-ansible-playbook -i $INVENTORY $PLAYBOOK --connection=local
+ansible-playbook -i $INVENTORY $PLAYBOOK ${ARGS} --connection=local

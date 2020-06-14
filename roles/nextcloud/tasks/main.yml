@@ -23,6 +23,10 @@
   include_tasks: install.yml
   when: nextcloud_installed is undefined
 
+- name: First Boot task
+  include_tasks: setup.yml
+  when: iiab_provision is defined
+
 - name: Enable/Disable/Restart Apache if primary
   include_tasks: apache.yml
   when: not nginx_enabled
