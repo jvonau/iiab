@@ -6,7 +6,7 @@ ConditionPathExists=/boot/local_vars.yml
 {% if is_ubuntu %}
 ConditionPathExists=/boot/firmware/local_vars.yml
 {% endif %}
-Before=iiab-provison.service
+Before=iiab-provision.service
 
 [Service]
 Type=oneshot

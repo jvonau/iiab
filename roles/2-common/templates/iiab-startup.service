@@ -3,7 +3,7 @@ Description=Execute startup script
 After=network.target
 Before=iiab-mv-localvars.service
 Before=iiab-setup-mysql.service
-Before=iiab-provison.service
+Before=iiab-provision.service
 Before=openvpn.service
 
 [Service]
