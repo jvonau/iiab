@@ -13,9 +13,14 @@
   assert:
     that: iiab_state_file_check.stat.exists
 
+- name: IIAB firstboot provison service
+  include_role:
+    name: provision
+  when: provision_install | bool
+
 - name: MYSQL enable
   include_role:
-    name: mysql-enable
+    name: mysql-enable | bool
 
 - name: Install pylibs (IIAB's python libs)
   include_role:
