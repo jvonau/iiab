@@ -9,6 +9,7 @@
   - /etc/iiab/iiab_state.yml
 
   roles:
+    - { role: validate, tags: ['validate'] }
     - { role: 0-init, tags: ['0-init'] }
     - { role: 4-server-options, tags: ['4-server-options'] }
     - { role: 5-xo-services, tags: ['5-xo-services'] }
