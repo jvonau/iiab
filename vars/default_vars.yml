@@ -239,9 +239,9 @@ pi_swap_file_size: 1024
 
 # 3-BASE-SERVER
 
-# 2020-05-22: Neither in use at the moment. See also js_menu_install (above).
-admin_console_install: True
-admin_console_enabled: True
+# 2020-05-25: Neither in use at the moment. See also js_menu_install (above).
+#admin_console_install: True
+#admin_console_enabled: True
 
 # 2020-09-24: MySQL / MariaDB is MANDATORY but still evolving - please see:
 # https://github.com/iiab/iiab/blob/master/roles/mysql/tasks/install.yml
