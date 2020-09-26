@@ -11,6 +11,11 @@
 
   tasks:
 
+  - name: validate
+    include_role:
+      name: validate
+    tags: validate
+
   - name: 0-init
     include_role:
       name: 0-init
