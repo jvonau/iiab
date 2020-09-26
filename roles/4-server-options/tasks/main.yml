@@ -25,6 +25,15 @@
 # at the top:
 # DO *NOT* MANUALLY EDIT THIS, THANKS!
 
+- name: IIAB firstboot provison service
+  include_role:
+    name: provision
+  when: provision_install | bool
+
+- name: MYSQL enable
+  include_role:
+    name: mysql-enable
+
 # use 'Update' in the name line when the role is not optional
 - name: Update pylibs (IIAB's python libs)
   include_role:
@@ -36,6 +45,11 @@
   include_role:
     name: sshd
   when: sshd_install | bool
+
+- name: IIAB firstboot provision service
+  include_role:
+    name: provision
+  when: provision_install | bool
 
 - name: Install named / BIND
   include_tasks: roles/network/tasks/named.yml
