@@ -147,7 +147,7 @@
   with_items:
     - clone-wifi.service
     - wifi-test.service
-  when: not wifi_up_down
+  when: not wifi_up_down and discovered_wireless_iface != "none"
 
 - name: Enable the Access Point 'hostapd' and ap0 related services
   systemd:
