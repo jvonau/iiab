@@ -2,8 +2,8 @@
 
 INVENTORY=ansible_hosts
 PLAYBOOK=run-roles-tmp.yml
+CWD=$(pwd)
 
-CWD=`pwd`
 if [ ! -f iiab-stages.yml ]; then
     echo "Exiting: IIAB Playbook not found."
     echo "Please run this in /opt/iiab/iiab (top level of the git repo)."
@@ -14,7 +14,7 @@ if [[ $# -eq 0 ]] ; then
     echo "Usage: ./runroles <list of roles separated by spaces>"
     exit 0
 fi
-
+export ANSIBLE_LOG_PATH="$CWD/iiab-runroles.log"
 # make working playbook
 cp runroles-base.yml $PLAYBOOK
 
