@@ -4,9 +4,9 @@ INVENTORY=ansible_hosts
 PLAYBOOK=run-one-role.yml
 ARGS=""
 REINSTALL=0
-CWD=`pwd`
+CWD=$(pwd)
 IIAB_STATE_FILE=/etc/iiab/iiab_state.yml
-LOCAL_VARS_FILE=/etc/iiab/local_vars.yml
+#LOCAL_VARS_FILE=/etc/iiab/local_vars.yml
 
 if [ ! -f $PLAYBOOK ]; then
     echo "Exiting: IIAB Playbook not found."
@@ -73,11 +73,11 @@ fi
 #fi
 
 if [ "$REINSTALL" == "1" ]; then
-    if [ $1 == "calibre-web" ]; then # role directory & installed marker differ
+    if [ "$1" == "calibre-web" ]; then # role directory & installed marker differ
         sed -i -e '/^calibreweb/d' $IIAB_STATE_FILE
-    elif [ $1 == "httpd" ]; then # role directory & installed marker differ
+    elif [ "$1" == "httpd" ]; then # role directory & installed marker differ
         sed -i -e '/^apache/d' $IIAB_STATE_FILE
-    elif [ $1 == "osm-vector-maps" ]; then # role directory & installed marker differ
+    elif [ "$1" == "osm-vector-maps" ]; then # role directory & installed marker differ
         sed -i -e '/^osm_vector_maps/d' $IIAB_STATE_FILE
     else
         sed -i -e "/^$1/d" $IIAB_STATE_FILE
@@ -90,5 +90,5 @@ else
    export ANSIBLE_LOG_PATH="$CWD/iiab-debug.log"
 fi
 
-ansible -m setup -i $INVENTORY localhost ${ARGS} --connection=local | grep python
-ansible-playbook -i $INVENTORY $PLAYBOOK ${ARGS} --connection=local -e "role_to_run=$1"
+ansible -m setup -i $INVENTORY localhost "${ARGS}" --connection=local | grep python
+ansible-playbook -i $INVENTORY $PLAYBOOK "${ARGS}" --connection=local -e "role_to_run=$1"
