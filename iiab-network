@@ -1,7 +1,7 @@
 #!/bin/bash
 # running from a git repo
 # ansible files exist
-CWD=`pwd`
+CWD=$(pwd)
 export ANSIBLE_LOG_PATH="$CWD/iiab-network.log"
 
 if [ ! -f iiab-network.yml ]; then
@@ -17,35 +17,35 @@ if [ -f /etc/iiab/iiab.env ]; then
     STAGE=0
     source /etc/iiab/iiab.env
     if grep -q STAGE= /etc/iiab/iiab.env ; then
-        echo -e "\nExtracted STAGE=$STAGE (counter) from /etc/iiab/iiab.env"
+        echo -e "\\nExtracted STAGE=$STAGE (counter) from /etc/iiab/iiab.env"
         if ! [ "$STAGE" -eq "$STAGE" ] 2> /dev/null; then
-            echo -e "\nEXITING: STAGE (counter) value == ""$STAGE"" is non-integer"
+            echo -e "\\nEXITING: STAGE (counter) value == ""$STAGE"" is non-integer"
             exit 1
         elif [ "$STAGE" -lt 0 ] || [ "$STAGE" -gt 9 ]; then
-            echo -e "\nEXITING: STAGE (counter) value == ""$STAGE"" is out-of-range"
+            echo -e "\\nEXITING: STAGE (counter) value == ""$STAGE"" is out-of-range"
             exit 1
         elif [ "$STAGE" -lt 3 ]; then
-            echo -e "\nEXITING: STAGE (counter) value == ""$STAGE"
-            echo -e "\nIIAB Stage 3 not complete."
-            echo -e "\nPlease run: ./iiab-install"
+            echo -e "\\nEXITING: STAGE (counter) value == ""$STAGE"
+            echo -e "\\nIIAB Stage 3 not complete."
+            echo -e "\\nPlease run: ./iiab-install"
             exit 1
         fi
     else
-        echo -e "\nEXITING: STAGE (counter) not found"
-        echo -e "\nIIAB not installed."
-        echo -e "\nPlease run: ./iiab-install"
+        echo -e "\\nEXITING: STAGE (counter) not found"
+        echo -e "\\nIIAB not installed."
+        echo -e "\\nPlease run: ./iiab-install"
         exit 1
     fi
 else
-    echo -e "\nEXITING: /etc/iiab/iiab.env not found"
+    echo -e "\\nEXITING: /etc/iiab/iiab.env not found"
     exit 1
 fi
 
 echo "Ansible will now run iiab-network.yml -- log file is iiab-network.log"
-Start=`date`
+Start=$(date)
 ansible -m setup -i ansible_hosts localhost --connection=local | grep python
 ansible-playbook -i ansible_hosts iiab-network.yml --connection=local
-End=`date`
+End=$(date)
 
 
 # Record critical diagnostics to [/opt/iiab/iiab/]iiab-network.log
@@ -66,7 +66,7 @@ fi
 #if [[ $(command -v nmcli) ]]; then      # Also Works! $(...) nests more easily than backticks
 #if [[ `which nmcli` ]]; then            # "which" misses built-in commands like cd, and is RISKY per https://stackoverflow.com/questions/592620/check-if-a-program-exists-from-a-bash-script
 #if [[ `type -P nmcli` ]]; then          # "type -P" isn't POSIX compliant; it misses built-in commands like "cd"
-if [[ `command -v nmcli` ]]; then        # "command -v" is POSIX compliant; it catches built-in commands like "cd"
+if [[ $(command -v nmcli) ]]; then        # "command -v" is POSIX compliant; it catches built-in commands like "cd"
     nmcli d >> iiab-network.log
     echo >> iiab-network.log
     nmcli c >> iiab-network.log
@@ -82,7 +82,7 @@ echo >> iiab-network.log
 
 
 # Put the same diagnostics on screen, for live operator
-if [[ `command -v nmcli` ]]; then
+if [[ $(command -v nmcli) ]]; then
     nmcli d
     echo
     nmcli c
