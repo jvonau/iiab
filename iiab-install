@@ -7,8 +7,8 @@ PLAYBOOK=iiab-stages.yml
 INVENTORY=ansible_hosts
 IIAB_STATE_FILE=/etc/iiab/iiab_state.yml
 ARGS=""
-CWD=`pwd`
-OS=`grep ^ID= /etc/*release|cut -d= -f2`
+CWD=$(pwd)
+OS=$(grep ^ID= /etc/*release|cut -d= -f2)
 OS=${OS//\"/}
 MIN_RPI_KERN=4.19.97       # If using Raspbian, 'rpi-update' should no longer be nec -- please use Raspbian 2020-02-13 or higher: https://github.com/iiab/iiab/issues/1993
 MIN_ANSIBLE_VER=2.8.11     # Ansible 2.8.3 and 2.8.6 have serious bugs, preventing their use with IIAB.
@@ -16,20 +16,20 @@ MIN_ANSIBLE_VER=2.8.11     # Ansible 2.8.3 and 2.8.6 have serious bugs, preventi
 if [ ! -f /etc/iiab/local_vars.yml ]; then
 
     if [ -f /opt/iiab/iiab/vars/local_vars.yml ]; then
-        echo -e "\nACTION NEEDED: YOUR /opt/iiab/iiab/vars/local_vars.yml IS NO LONGER SUPPORTED.\n" >&2
+        echo -e "\\nACTION NEEDED: YOUR /opt/iiab/iiab/vars/local_vars.yml IS NO LONGER SUPPORTED.\\n" >&2
 
         echo -e "███████████████████ TO MOVE IT TO THE CORRECT LOCATION, RUN: ███████████████████" >&2
         echo -e "██                                                                            ██" >&2
         echo -e "██       mv /opt/iiab/iiab/vars/local_vars.yml /etc/iiab/local_vars.yml       ██" >&2
         echo -e "██                                                                            ██" >&2
-        echo -e "████████████████████████████████████████████████████████████████████████████████\n" >&2
+        echo -e "████████████████████████████████████████████████████████████████████████████████\\n" >&2
     fi
 
-    echo -e "\nEXITING: /opt/iiab/iiab/iiab-install REQUIRES /etc/iiab/local_vars.yml\n" >&2
+    echo -e "\\nEXITING: /opt/iiab/iiab/iiab-install REQUIRES /etc/iiab/local_vars.yml\\n" >&2
 
     echo -e "(1) Please read http://wiki.laptop.org/go/IIAB/local_vars.yml to learn more" >&2
     echo -e "(2) MIN/MEDIUM/BIG samples are included in /opt/iiab/iiab/vars" >&2
-    echo -e "(3) NO TIME FOR DETAILS?  RUN INTERNET-IN-A-BOX'S FRIENDLY 1-LINE INSTALLER:\n" >&2
+    echo -e "(3) NO TIME FOR DETAILS?  RUN INTERNET-IN-A-BOX'S FRIENDLY 1-LINE INSTALLER:\\n" >&2
 
     echo -e '    http://download.iiab.io\n' >&2
 
@@ -38,7 +38,7 @@ fi
 
 # FUTURE: Test if their local_vars.yml is sufficiently version-compatible !
 
-echo -e "\n\n./iiab-install $* BEGUN IN $CWD\n"
+echo -e "\\n\\n./iiab-install $* BEGUN IN $CWD\\n"
 
 if [ ! -f /etc/ansible/facts.d/local_facts.fact ]; then
     mkdir -p /etc/ansible/facts.d
@@ -69,10 +69,10 @@ version_gt() { [ "$(printf '%s\n' "$@" | sort -V | head -1)" != "$1" ]; }
 
 # Verify that Raspbian is running a recent enough kernel.  As Raspbian
 # updates on 4.9.41-v7+ broke bridging, WiFi AP & OpenVPN in Oct/Nov 2017.
-CURR_KERN=`uname -r`
+CURR_KERN=$(uname -r)
 echo "Found Kernel ""$CURR_KERN"
-if [ "$OS" == "raspbian" ] && version_gt $MIN_RPI_KERN $CURR_KERN ; then
-    echo -e "\nEXITING: Kernel ""$MIN_RPI_KERN"" or higher required with Raspbian."
+if [ "$OS" == "raspbian" ] && version_gt $MIN_RPI_KERN "$CURR_KERN" ; then
+    echo -e "\\nEXITING: Kernel ""$MIN_RPI_KERN"" or higher required with Raspbian."
     echo -e "PLEASE RUN 'apt update' then 'apt install raspberrypi-kernel' then reboot."
     echo -e "THEN IF NEC run 'rpi-update' to install a more recent kernel, then reboot."
     echo -e "IIAB INSTALL INSTRUCTIONS: https://github.com/iiab/iiab/wiki/IIAB-Installation"
@@ -88,18 +88,18 @@ CURR_ANSIBLE_VER=0
 #if [[ $(command -v ansible) ]]; then      # Also Works! $(...) nests more easily than backticks
 #if [[ `which ansible` ]]; then            # "which" misses built-in commands like cd, and is RISKY per https://stackoverflow.com/questions/592620/check-if-a-program-exists-from-a-bash-script
 #if [[ `type -P ansible` ]]; then          # "type -P" isn't POSIX compliant; it misses built-in commands like "cd"
-if [[ `command -v ansible` ]]; then        # "command -v" is POSIX compliant; it catches built-in commands like "cd"
+if [[ $(command -v ansible) ]]; then        # "command -v" is POSIX compliant; it catches built-in commands like "cd"
     #CURR_ANSIBLE_VER=`ansible --version | head -1 | sed -e 's/.* //'`
     #CURR_ANSIBLE_VER=`ansible --version | head -1 | cut -f 2 -d " "`
-    CURR_ANSIBLE_VER=`ansible --version | head -1 | awk '{print $2}'`    # to match scripts/ansible
+    CURR_ANSIBLE_VER=$(ansible --version | head -1 | awk '{print $2}')    # to match scripts/ansible
     echo "Found Ansible ""$CURR_ANSIBLE_VER"
 fi
-if version_gt $MIN_ANSIBLE_VER $CURR_ANSIBLE_VER ; then
-    echo -e "\nEXITING: Ansible ""$MIN_ANSIBLE_VER"" or higher required.\n"
+if version_gt $MIN_ANSIBLE_VER "$CURR_ANSIBLE_VER" ; then
+    echo -e "\\nEXITING: Ansible ""$MIN_ANSIBLE_VER"" or higher required.\\n"
 
     echo -e "REMOVE PRIOR VERSIONS using 'apt purge ansible' and/or 'pip uninstall ansible'."
     echo -e "THEN RUN 'scripts/ansible' to install the latest Ansible from PPA or RPM."
-    echo -e "'ansible --version' and 'apt -a list ansible' can also be very useful.\n"
+    echo -e "'ansible --version' and 'apt -a list ansible' can also be very useful.\\n"
 
     echo -e "IIAB INSTALL INSTRUCTIONS: https://github.com/iiab/iiab/wiki/IIAB-Installation"
     exit 1
@@ -113,10 +113,10 @@ if [ -f /etc/iiab/iiab.env ]; then
         source /etc/iiab/iiab.env
         echo "Extracted STAGE=""$STAGE"" (counter) from /etc/iiab/iiab.env"
         if ! [ "$STAGE" -eq "$STAGE" ] 2> /dev/null; then
-            echo -e "\nEXITING: STAGE (counter) value == ""$STAGE"" is non-integer in /etc/iiab/iiab.env"
+            echo -e "\\nEXITING: STAGE (counter) value == ""$STAGE"" is non-integer in /etc/iiab/iiab.env"
             exit 1
         elif [ "$STAGE" -lt 0 ] || [ "$STAGE" -gt 9 ]; then
-            echo -e "\nEXITING: STAGE (counter) value == ""$STAGE"" is out-of-range in /etc/iiab/iiab.env"
+            echo -e "\\nEXITING: STAGE (counter) value == ""$STAGE"" is out-of-range in /etc/iiab/iiab.env"
             exit 1
         fi
     fi
@@ -131,18 +131,18 @@ if [ -f /etc/iiab/iiab.env ]; then
         sed -i 's/^STAGE=.*/STAGE=2/' /etc/iiab/iiab.env
         echo "Wrote STAGE=2 (counter) to /etc/iiab/iiab.env"
     elif [ "$STAGE" -eq 9 ]; then
-        echo -e "\nEXITING: STAGE (counter) in /etc/iiab/iiab.env shows Stage 9 Is Already Done."
+        echo -e "\\nEXITING: STAGE (counter) in /etc/iiab/iiab.env shows Stage 9 Is Already Done."
         echo -e "Use './iiab-install --reinstall' to force running all Stages 0-9, followed by the Network Role."
         echo -e "Use './iiab-install --debug' to run Stage 0, followed by Stages 3-9, followed by the Network Role."
         echo -e "Use './iiab-configure' to run Stage 0, followed by Stages 4-9."
         echo -e "Use './runrole' to run Stage 0, followed by a single Stage or Role."
-        echo -e "Use './iiab-network' to run Stage 0, followed by the Network Role.\n\n"
+        echo -e "Use './iiab-network' to run Stage 0, followed by the Network Role.\\n\\n"
 
         exit 0    # Allows rerunning http://download.iiab.io/install.txt
     fi
 fi
 if [ "$STAGE" -lt 2 ] && [ "$1" == "--debug" ]; then
-    echo -e "\n'--debug' *ignored* as STAGE (counter) < 2."
+    echo -e "\\n'--debug' *ignored* as STAGE (counter) < 2."
 fi
 
 # /etc/iiab/iiab_state.yml is mandatory and must be created here.  Background:
@@ -156,14 +156,14 @@ if [ ! -f  $IIAB_STATE_FILE ]; then
 
 EOF
 fi
-echo -e "\nTRY TO RERUN './iiab-install' IF IT FAILS DUE TO CONNECTIVITY ISSUES ETC!\n"
+echo -e "\\nTRY TO RERUN './iiab-install' IF IT FAILS DUE TO CONNECTIVITY ISSUES ETC!\\n"
 
-echo -e "Running local Ansible playbooks...\n...Stage 0 will now run\n...followed by Stages $(($STAGE + 1))-9\n...and then the Network Role.\n"
+echo -e "Running local Ansible playbooks...\\n...Stage 0 will now run\\n...followed by Stages $STAGE + 1-9\\n...and then the Network Role.\\n"
 
-export ANSIBLE_LOG_PATH="$CWD""/iiab-install.log"
+export ANSIBLE_LOG_PATH="$CWD/iiab-install.log"
 
 ansible -m setup -i $INVENTORY localhost --connection=local | grep python
 ansible -m setup -i $INVENTORY localhost --connection=local >> /dev/null    # So vars are recorded in /opt/iiab/iiab/iiab-install.log
-ansible-playbook -i $INVENTORY $PLAYBOOK ${ARGS} --connection=local
+ansible-playbook -i $INVENTORY $PLAYBOOK "${ARGS}" --connection=local
 
-echo -e "./iiab-install $* COMPLETED IN $CWD\n\n"
+echo -e "./iiab-install $* COMPLETED IN $CWD\\n\\n"
