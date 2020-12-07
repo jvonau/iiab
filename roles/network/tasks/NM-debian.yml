@@ -82,6 +82,7 @@
 - name: Reload systemd
   systemd:
     daemon_reload: yes
+  when: not systemd_networkd_active
 
 - name: Restart the NetworkManager service
   systemd:
