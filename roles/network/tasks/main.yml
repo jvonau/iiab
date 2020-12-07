@@ -45,8 +45,6 @@
 #### Start services
 - name: avahi
   include_tasks: avahi.yml
-- name: hostapd
-  include_tasks: hostapd.yml
 - name: computed_services
   include_tasks: computed_services.yml
 - name: enable_services
@@ -61,6 +59,9 @@
 - name: NetworkManager in use
   include_tasks: NM-debian.yml
   when: is_debuntu and network_manager_active
+
+- name: hostapd
+  include_tasks: hostapd.yml
 
 - name: systemd-networkd in use
   include_tasks: sysd-netd-debian.yml
