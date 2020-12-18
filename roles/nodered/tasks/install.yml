@@ -124,7 +124,7 @@
   apache2_module:
     state: present
     name: proxy_wstunnel
-
+  when: not provision_active
 
 # RECORD Node-RED AS INSTALLED
 
@@ -137,3 +137,4 @@
     path: "{{ iiab_state_file }}"    # /etc/iiab/iiab_state.yml
     regexp: '^nodered_installed'
     line: 'nodered_installed: True'
+  when: not provision_active
