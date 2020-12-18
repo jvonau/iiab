@@ -71,17 +71,6 @@
     - mpm_prefork.load
   when: is_debuntu
 
-- name: 'Enable 5 Apache modules, as with "a2enmod" command: headers, proxy, proxy_html, proxy_http, rewrite (for http://box/kiwix, http://box/kolibri, http://box/nodered, etc--if debuntu)'
-  apache2_module:
-    name: "{{ item }}"
-  with_items:
-    - headers
-    - proxy
-    - proxy_html
-    - proxy_http
-    - rewrite
-  when: is_debuntu
-
 - name: Remove 000-default.conf from /etc/apache2 and /etc/apache2/sites-enabled (debuntu)
   file:
     path: "{{ item }}"
@@ -128,7 +117,18 @@
 
 - name: "IN CASE NGINX IS DISABLED: Enable IIAB pages via Apache (e.g. on port 80) by running 'a2ensite 010-iiab.conf'"
   command: a2ensite 010-iiab.conf
-  #when: apache_enabled
+  when: not nginx_enabled
+
+- name: 'Enable 5 Apache modules, as with "a2enmod" command: headers, proxy, proxy_html, proxy_http, rewrite (for http://box/kiwix, http://box/kolibri, http://box/nodered, etc--if debuntu)'
+  apache2_module:
+    name: "{{ item }}"
+  with_items:
+    - headers
+    - proxy
+    - proxy_html
+    - proxy_http
+    - rewrite
+  when: is_debuntu and not provision_active
 
 # - name: Disable IIAB pages via Apache (e.g. on port 80) by running 'a2dissite 010-iiab.conf', if not apache_enabled"
 #   command: a2dissite 010-iiab.conf
@@ -155,3 +155,4 @@
     path: "{{ iiab_state_file }}"    # /etc/iiab/iiab_state.yml
     regexp: '^apache_installed'
     line: 'apache_installed: True'
+  when: not provision_active
