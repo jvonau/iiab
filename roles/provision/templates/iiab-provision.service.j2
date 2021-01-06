@@ -2,13 +2,23 @@
 Description=IIAB provision service
 After=mariadb.service
 Requires=mariadb.service
-After=iiab-mv-localvars.service
-Requires=iiab-mv-localvars.service
+{% if is_raspbian %}
+ConditionPathExists=/boot/local_vars.yml
+{% endif %}
+{% if is_ubuntu %}
+ConditionPathExists=/boot/firmware/local_vars.yml
+{% endif %}
 
 [Service]
 Type=oneshot
 WorkingDirectory={{ iiab_dir }}
 ExecStartPre=/bin/touch /run/iiab-provision
+{% if is_raspbian %}
+ExecStartPre=/bin/mv /boot/local_vars.yml /etc/iiab/local_vars.yml
+{% endif %}
+{% if is_ubuntu %}
+ExecStartPre=/bin/mv /boot/firmware/local_vars.yml /etc/iiab/local_vars.yml
+{% endif %}
 ExecStart={{ iiab_dir }}/iiab-configure
 ExecStartPost=/bin/systemctl disable iiab-provision.service
 ExecStartPost=/bin/rm /run/iiab-provision

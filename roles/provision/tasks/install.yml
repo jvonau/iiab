@@ -14,14 +14,14 @@
     mode: 0644
     backup: no
 
-- name: Install iiab-mv-localvars.service unit file
-  template:
-    dest: /etc/systemd/system/iiab-mv-localvars.service
-    src: iiab-mv-localvars.service.j2
-    owner: root
-    mode: 0644
-    backup: no
-  when: rpi_model != "none"
+#- name: Install iiab-mv-localvars.service unit file
+#  template:
+#    dest: /etc/systemd/system/iiab-mv-localvars.service
+#    src: iiab-mv-localvars.service.j2
+#    owner: root
+#    mode: 0644
+#    backup: no
+#  when: rpi_model != "none"
 
 - name: Install RPi rootfs resizing (iiab-rpi-max-rootfs.sh) and its systemd service (iiab-rpi-root-resize.service), from templates
   template:
