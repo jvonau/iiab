@@ -66,15 +66,15 @@
 - name: Set vars_checklist for 40 + 40 + up-to-40 vars ("XYZ_install" + "XYZ_enabled" + "XYZ_installed") to be checked
   set_fact:
     vars_checklist:
-      - hostapd
+      #- hostapd            # MANDATORY
       - dhcpd
       - named
-      - dnsmasq
+      #- dnsmasq            # MANDATORY
       - bluetooth
       #- wondershaper       # Unmaintained
       - sshd
       - openvpn
-      - admin_console
+      #- admin_console      # role does not exsist console install does not record to iiab_state
       #- nginx              # MANDATORY
       - apache              # Dependency - excluded from _installed check below
       #- mysql              # MANDATORY
