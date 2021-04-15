@@ -78,7 +78,7 @@
     state: directory
 
 - include_tasks: roles/network/tasks/dansguardian.yml
-  when: dansguardian_install
+  when: dansguardian_install and dansguardian_installed is undefined
 
 - name: "Add 'squid_installed: True' to {{ iiab_state_file }}"
   lineinfile:

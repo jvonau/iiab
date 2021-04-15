@@ -24,17 +24,21 @@
     name: sshd
   when: sshd_install
 
+## Start no role services what would be in main.yml calling install.yml
+# goes here. What would be in install.yml is the service name below. These
+# just install packages and some config files and needs to run only once.
 - name: Install named / BIND
   include_tasks: roles/network/tasks/named.yml
-  when: named_install
+  when: named_install and named_installed is undefined
 
 - name: Install dhcpd
   include_tasks: roles/network/tasks/dhcpd.yml
-  when: dhcpd_install
+  when: dhcpd_install and dhcpd_installed is undefined
 
 - name: Install Squid (and DansGuardian if dansguardian_install)
   include_tasks: roles/network/tasks/squid.yml
-  when: squid_install
+  when: squid_install and squid_installed is undefined
+## network role has the logic to act accordingly replacing files as needed.
 
 - name: Install Bluetooth - only on Raspberry Pi
   include_role:
