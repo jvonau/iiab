@@ -74,7 +74,7 @@ host_wifi_mode: g
 host_channel: 6
 hostapd_secure: False # 2021-03-02 #2696 WiFi EAPOL fails if hotspot passwords,
 hostapd_password: changeme # eg if firmware wifi_hotspot_capacity_rpi_fix: True
-wifi_hotspot_capacity_rpi_fix: True    # Restores the ability of RPi internal
+wifi_hotspot_capacity_rpi_fix: False    # Restores the ability of RPi internal
 # WiFi hotspots to service 30-to-32 client devices.  Background explanation:
 # https://github.com/iiab/iiab/issues/823#issuecomment-662285202 and PR #2472.
 wifi_up_down: True    # Creates a 2nd virtual WiFi adapter for upstream WiFi
