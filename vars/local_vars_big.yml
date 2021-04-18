@@ -208,28 +208,31 @@ iiab_usb_lib_show_all: True
 usb_lib_umask0000_for_kolibri: True
 
 
-# 5-XO-SERVICES
+# 5-Never-reinstall
 
-# Lesser-supported XO services need additional testing.  Please contact
-# http://lists.laptop.org/pipermail/server-devel/ if you're able to help test.
+# KA Lite - SEE THE "Transmission" BITTORRENT DOWNLOADER FURTHER BELOW, TO INSTALL THOUSANDS OF VIDEOS
+kalite_install: True
+kalite_enabled: True
 
-# UNMAINTAINED
-# xo_services_install: False
-# xo_services_enabled: False
+# Store your docs, calendar, contacts & photos on your local server not cloud!
+# If using Nextcloud intensively, set nginx_high_php_limits further above.
+nextcloud_install: True
+nextcloud_enabled: True
+#
+# 2020-02-15: UNUSED at this time.  Legacy remains from Apache:
+# nextcloud_allow_public_ips: True
+#
+# Configuration tips for IPv4 access controls and tuning RAM/resources:
+# https://github.com/iiab/iiab/blob/master/roles/nextcloud/README.md
+#
+# 2020-01-07: If installing IIAB often, download.nextcloud.com may throttle
+# you to ~100 kbit/sec, delaying your IIAB install by an hour or more (#2112).
+# Uncomment the following line to end that: (might install an older Nextcloud!)
+# nextcloud_dl_url: http://d.iiab.io/packages/latest.tar.bz2
 
-# UNMAINTAINED
-# activity_server_install: False
-# activity_server_enabled: False
-
-# UNMAINTAINED
-# Please instead consider 'ejabberd' in Stage 6-GENERIC-APPS below
-# ejabberd_xs_install: False
-# ejabberd_xs_enabled: False
-
-# UNMAINTAINED
-# Change calibre_port from 8080 to 8010 below, if you enable idmgr
-# idmgr_install: False
-# idmgr_enabled: False
+# If using WordPress intensively, set nginx_high_php_limits further above.
+wordpress_install: True
+wordpress_enabled: True
 
 
 # 6-GENERIC-APPS
@@ -268,10 +271,6 @@ mosquitto_enabled: True
 nodered_install: True
 nodered_enabled: True
 
-# Store your docs, calendar, contacts & photos on your local server not cloud!
-# If using Nextcloud intensively, set nginx_high_php_limits further above.
-nextcloud_install: True
-nextcloud_enabled: True
 #
 # 2020-02-15: UNUSED at this time.  Legacy remains from Apache:
 # nextcloud_allow_public_ips: True
@@ -290,16 +289,8 @@ pbx_install: False
 pbx_enabled: False
 asterisk_chan_dongle: False
 
-# If using WordPress intensively, set nginx_high_php_limits further above.
-wordpress_install: True
-wordpress_enabled: True
-
 
 # 7-EDU-APPS
-
-# KA Lite - SEE THE "Transmission" BITTORRENT DOWNLOADER FURTHER BELOW, TO INSTALL THOUSANDS OF VIDEOS
-kalite_install: True
-kalite_enabled: True
 
 kolibri_install: True
 kolibri_enabled: True
