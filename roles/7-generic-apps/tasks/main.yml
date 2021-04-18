@@ -66,8 +66,8 @@
     name: wordpress
   when: wordpress_install
 
-- name: Recording STAGE 6 HAS COMPLETED ====================
+- name: Recording STAGE 7 HAS COMPLETED ====================
   lineinfile:
     path: "{{ iiab_env_file }}"
     regexp: '^STAGE=*'
-    line: 'STAGE=6'
+    line: 'STAGE=7'

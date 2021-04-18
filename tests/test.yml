@@ -8,8 +8,8 @@
     - { role: 3-base-server }
     - { role: 4-server-options }
     - { role: 5-xo-services }
-    - { role: 6-generic-apps }
-    - { role: 7-edu-apps }
+    - { role: 6-edu-apps }
+    - { role: 7-generic-apps }
     - { role: 8-mgmt-tools }
     - { role: 9-local-addons }
     #- { role: activity-server

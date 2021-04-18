@@ -40,14 +40,14 @@
       name: 5-xo-services
     when: ansible_local.local_facts.stage|int < 5
 
-  - name: 6-generic-apps
+  - name: 6-edu-apps
     include_role:
-      name: 6-generic-apps
+      name: 6-edu-apps
     when: ansible_local.local_facts.stage|int < 6
 
-  - name: 7-edu-apps
+  - name: 7-generic-apps
     include_role:
-      name: 7-edu-apps
+      name: 7-generic-apps
     when: ansible_local.local_facts.stage|int < 7
 
   - name: 8-mgmt-tools
