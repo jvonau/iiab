@@ -51,20 +51,10 @@
     name: nodered
   when: nodered_install
 
-- name: NEXTCLOUD
-  include_role:
-    name: nextcloud
-  when: nextcloud_install
-
 - name: PBX
   include_role:
     name: pbx
   when: pbx_install
-
-- name: WORDPRESS
-  include_role:
-    name: wordpress
-  when: wordpress_install
 
 - name: Recording STAGE 6 HAS COMPLETED ====================
   lineinfile:
