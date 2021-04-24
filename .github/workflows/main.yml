@@ -29,9 +29,9 @@ jobs:
       - name: Run a multi-line script
         run: |
           echo Add other actions to build,
-          sudo apt-add-repository ppa:ansible/focal/ansible
-          sudo apt update
-          sudo apt install ansible-base python3-packaging
+          sudo apt-add-repository -y ppa:ansible/ansible
+          sudo apt update -y
+          sudo apt install -y ansible-base python3-packaging
           sudo ansible-galaxy collection install -r collections.yml
           echo 'roles_path = ./roles/' >> ansible.cfg" 
           sudo apt -a list ansible-base
