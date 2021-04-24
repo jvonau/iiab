@@ -33,6 +33,6 @@ jobs:
           sudo apt update -y
           sudo apt install -y ansible-base python3-packaging
           sudo ansible-galaxy collection install -r collections.yml
-          echo 'roles_path = ./roles/' >> ansible.cfg" 
+          echo "roles_path = ./roles/" >> ansible.cfg
           sudo apt -a list ansible-base
           ansible-playbook tests/test.yml -i tests/inventory --syntax-check
