@@ -234,7 +234,7 @@ samba_enabled: False
 # 6-GENERIC-APPS
 
 # UNMAINTAINED as of September 2020
-azuracast_install: False
+azuracast_install: True
 azuracast_enabled: False    # This var is currently IGNORED.
 
 # UNMAINTAINED as of January 2020: https://github.com/iiab/iiab/issues/2056
@@ -249,22 +249,22 @@ elgg_install: False
 elgg_enabled: False
 
 # Gitea (lightweight self-hosted "GitHub") from https://gitea.io
-gitea_install: False
+gitea_install: True
 gitea_enabled: False
 
 # Lokole (email for rural communities) from https://ascoderu.ca
-lokole_install: False
+lokole_install: True
 lokole_enabled: False
 
 mediawiki_install: False
 mediawiki_enabled: False
 
 # MQTT pub-sub broker for IoT on Raspberry Pi etc
-mosquitto_install: False
+mosquitto_install: True
 mosquitto_enabled: False
 
 # Flow-based visual programming for wiring together IoT hardware devices etc
-nodered_install: False
+nodered_install: True
 nodered_enabled: False
 
 # Store your docs, calendar, contacts & photos on your local server not cloud!
@@ -285,7 +285,7 @@ nextcloud_enabled: False
 
 # A full-featured PBX (for rural telephony, etc) based on Asterisk and FreePBX.
 # Works on Ubuntu 18.04, Debian 9 w/ Node.js 10.x.  Experimental on RPi 3.
-pbx_install: False
+pbx_install: True
 pbx_enabled: False
 asterisk_chan_dongle: False
 
@@ -300,12 +300,12 @@ wordpress_enabled: False
 kalite_install: False
 kalite_enabled: False
 
-kolibri_install: False
+kolibri_install: True
 kolibri_enabled: False
 kolibri_language: en    # ar,bn-bd,en,es-es,fa,fr-fr,hi-in,mr,nyn,pt-br,sw-tz,ta,te,ur-pk,yo,zu
 
 # kiwix_install: True is REQUIRED, if you install IIAB's Admin Console
-kiwix_install: False
+kiwix_install: True
 kiwix_enabled: False
 
 # Warning: Moodle is a serious LMS, that takes a while to install.
@@ -330,7 +330,7 @@ sugarizer_enabled: False
 # 8-MGMT-TOOLS
 
 # BitTorrent downloader for large Content Packs etc
-transmission_install: False
+transmission_install: True
 transmission_enabled: False
 # A. UNCOMMENT LANGUAGE(S) TO DOWNLOAD KA Lite VIDEOS TO /library/transmission
 #    using http://pantry.learningequality.org/downloads/ka-lite/0.17/content/
@@ -372,7 +372,7 @@ vnstat_enabled: False
 
 # Internet Archive Decentralized Web - create your own offline version box:4244
 # (or http://box/archive) arising from digital library https://dweb.archive.org
-internetarchive_install: False
+internetarchive_install: True
 internetarchive_enabled: False
 
 # Minetest is an open source clone of the Minecraft building blocks game
@@ -394,7 +394,7 @@ calibre_web_path: calibre  #NEEDS WORK: https://github.com/iiab/iiab/issues/529
 # program, so we recommend you also install Calibre (above!)
 
 # Calibre-Web alternative to Calibre, offers a clean/modern UX
-calibreweb_install: False
+calibreweb_install: True
 calibreweb_enabled: False
 calibreweb_port: 8083       # PORT VARIABLE HAS NO EFFECT (as of January 2019)
 # http://box/books works.  Add {box/libros, box/livres, box/livros, box/liv} etc?
