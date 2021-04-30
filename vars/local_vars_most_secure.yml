@@ -285,7 +285,7 @@ nextcloud_enabled: False
 
 # A full-featured PBX (for rural telephony, etc) based on Asterisk and FreePBX.
 # Works on Ubuntu 18.04, Debian 9 w/ Node.js 10.x.  Experimental on RPi 3.
-pbx_install: True
+pbx_install: False
 pbx_enabled: False
 asterisk_chan_dongle: False
 
@@ -323,7 +323,7 @@ maps_from_internet_archive: False
 # Might stall MongoDB on Power Failure: github.com/xsce/xsce/issues/879
 # Sugarizer 1.0.1+ strategies to solve? github.com/iiab/iiab/pull/957
 # 2020-09-22: Both vars WERE IGNORED on Deb 10 (MongoDB) but no longer?  #1437
-sugarizer_install: False
+sugarizer_install: True
 sugarizer_enabled: False
 
 
@@ -350,21 +350,21 @@ transmission_kalite_languages:
 #    then click "Scan content folder for videos" (can take many minutes!)
 # E. READ "KA Lite Administration: What tips & tricks exist?" AT http://FAQ.IIAB.IO
 
-awstats_install: False
+awstats_install: True
 awstats_enabled: False
 
 # 2020-09-22 WARNING: both vars are IGNORED on Debian 10 due to: iiab/iiab#1849
-monit_install: False
+monit_install: True
 monit_enabled: False
 
-munin_install: False
+munin_install: True
 munin_enabled: False
 
 # Handy for maintaining tables, but DANGEROUS if not locked down
 phpmyadmin_install: False
 phpmyadmin_enabled: False
 
-vnstat_install: False
+vnstat_install: True
 vnstat_enabled: False
 
 
@@ -376,7 +376,7 @@ internetarchive_install: True
 internetarchive_enabled: False
 
 # Minetest is an open source clone of the Minecraft building blocks game
-minetest_install: False
+minetest_install: True
 minetest_enabled: False
 
 # Calibre E-Book Library
