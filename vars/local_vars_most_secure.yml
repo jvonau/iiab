@@ -297,7 +297,7 @@ wordpress_enabled: False
 # 7-EDU-APPS
 
 # KA Lite - SEE THE "Transmission" BITTORRENT DOWNLOADER FURTHER BELOW, TO INSTALL THOUSANDS OF VIDEOS
-kalite_install: False
+kalite_install: True
 kalite_enabled: False
 
 kolibri_install: True
