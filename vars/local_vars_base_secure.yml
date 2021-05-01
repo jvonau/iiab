@@ -22,15 +22,6 @@ language_priority: en es fr
 # Real-time clock: set RTC chip family here.  Future auto-detection plausible?
 # rtc_id: ds3231
 
-# Make this False to disable http://box/common/services/power_off.php button:
-apache_allow_sudo: False
-
-# Show entire contents of USB sticks/drives (at http://box/usb)
-iiab_usb_lib_show_all: False
-# Set umask=0000 for VFAT, NTFS and exFAT in /etc/usbmount/usbmount.conf so
-# Kolibri can export & import channels to USB sticks/drive:
-usb_lib_umask0000_for_kolibri: False
-
 # Please read more about the 'iiab-admin' Linux user, for login to IIAB's
 # Admin Console (http://box.lan/admin) AND to help you at the command-line:
 # https://github.com/iiab/iiab/tree/master/roles/iiab-admin
@@ -183,6 +174,9 @@ nginx_high_php_limits: False
 
 # See also Apache vars {default_language, language_priority} @ top of this file
 #
+# Make this False to disable http://box/common/services/power_off.php button:
+apache_allow_sudo: False
+
 
 # 4-SERVER-OPTIONS
 
@@ -206,6 +200,13 @@ cups_enabled: False
 # At Your Own Risk: take a security audit seriously before deploying this
 samba_install: False
 samba_enabled: False
+
+# Show entire contents of USB sticks/drives (at http://box/usb)
+iiab_usb_lib_show_all: False
+# Set umask=0000 for VFAT, NTFS and exFAT in /etc/usbmount/usbmount.conf so
+# Kolibri can export & import channels to USB sticks/drive:
+usb_lib_umask0000_for_kolibri: False
+
 
 # 5-XO-SERVICES
 
