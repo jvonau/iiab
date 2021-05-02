@@ -22,15 +22,6 @@ language_priority: en es fr
 # Real-time clock: set RTC chip family here.  Future auto-detection plausible?
 # rtc_id: ds3231
 
-# Make this False to disable http://box/common/services/power_off.php button:
-apache_allow_sudo: False
-
-# Show entire contents of USB sticks/drives (at http://box/usb)
-iiab_usb_lib_show_all: False
-# Set umask=0000 for VFAT, NTFS and exFAT in /etc/usbmount/usbmount.conf so
-# Kolibri can export & import channels to USB sticks/drive:
-usb_lib_umask0000_for_kolibri: False
-
 # Please read more about the 'iiab-admin' Linux user, for login to IIAB's
 # Admin Console (http://box.lan/admin) AND to help you at the command-line:
 # https://github.com/iiab/iiab/tree/master/roles/iiab-admin
@@ -154,7 +145,7 @@ sshd_enabled: True
 # e.g. iiab_admin_user_install, iiab_admin_user, iiab_admin_pwd_hash
 
 # SECURITY WARNING: See http://wiki.laptop.org/go/IIAB/Security
-openvpn_install: True
+openvpn_install: False
 openvpn_enabled: False
 # Set /etc/iiab/openvpn_handle in advance here:
 openvpn_handle: MIN-sized - Put Your Name Here
@@ -183,6 +174,9 @@ nginx_high_php_limits: False
 
 # See also Apache vars {default_language, language_priority} @ top of this file
 #
+# Make this False to disable http://box/common/services/power_off.php button:
+apache_allow_sudo: False
+
 
 # 4-SERVER-OPTIONS
 
@@ -206,6 +200,13 @@ cups_enabled: False
 # At Your Own Risk: take a security audit seriously before deploying this
 samba_install: False
 samba_enabled: False
+
+# Show entire contents of USB sticks/drives (at http://box/usb)
+iiab_usb_lib_show_all: False
+# Set umask=0000 for VFAT, NTFS and exFAT in /etc/usbmount/usbmount.conf so
+# Kolibri can export & import channels to USB sticks/drive:
+usb_lib_umask0000_for_kolibri: False
+
 
 # 5-XO-SERVICES
 
@@ -298,7 +299,7 @@ wordpress_enabled: False
 
 # KA Lite - SEE THE "Transmission" BITTORRENT DOWNLOADER FURTHER BELOW, TO INSTALL THOUSANDS OF VIDEOS
 kalite_install: True
-kalite_enabled: False
+kalite_enabled: True
 
 kolibri_install: False
 kolibri_enabled: False
@@ -306,7 +307,7 @@ kolibri_language: en    # ar,bn-bd,en,es-es,fa,fr-fr,hi-in,mr,nyn,pt-br,sw-tz,ta
 
 # kiwix_install: True is REQUIRED, if you install IIAB's Admin Console
 kiwix_install: True
-kiwix_enabled: False
+kiwix_enabled: True
 
 # Warning: Moodle is a serious LMS, that takes a while to install.
 moodle_install: False
@@ -350,8 +351,8 @@ transmission_kalite_languages:
 #    then click "Scan content folder for videos" (can take many minutes!)
 # E. READ "KA Lite Administration: What tips & tricks exist?" AT http://FAQ.IIAB.IO
 
-awstats_install: False
-awstats_enabled: False
+awstats_install: True
+awstats_enabled: True
 
 # 2020-09-22 WARNING: both vars are IGNORED on Debian 10 due to: iiab/iiab#1849
 monit_install: False
