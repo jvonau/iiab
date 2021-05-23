@@ -51,7 +51,7 @@ iiab_hostname: box
 iiab_domain: lan
 
 # Homepage: set to /home or /wordpress or /wiki (for MediaWiki)
-iiab_home_url: /lokole
+iiab_home_url: /home
 # You might also want to set captiveportal_splash_page (below!)
 
 # WARNING: IF YOU CONNECT YOUR IIAB'S INTERNAL WIFI TO THE INTERNET OVER 5 GHz,
@@ -255,7 +255,7 @@ gitea_enabled: False
 
 # Lokole (email for rural communities) from https://ascoderu.ca
 lokole_install: True
-lokole_enabled: True
+lokole_enabled: False
 
 mediawiki_install: False
 mediawiki_enabled: False
