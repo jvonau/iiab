@@ -1,3 +1,9 @@
+- name: Install php{{ php_version }}-fpm
+  package:
+    name:
+      - php{{ php_version }}-fpm         # Moved from nginx role
+    state: present
+
 - name: Make 5 directories (0755 by default)
   file:
     path: "{{ item }}"

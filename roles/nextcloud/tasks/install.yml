@@ -74,6 +74,7 @@
       #- php{{ php_version }}-xmlrpc       # 2021-06-27: Experimentally remove, as explained in moodle/tasks/install.yml
       - php{{ php_version }}-zip           # Likewise installed in moodle/tasks/install.yml, pbx/tasks/freepbx_dependencies.yml, wordpress/tasks/install.yml
       #- php{{ php_version }}-zlib         # NOT INSTALLABLE: ENABLED BY DEFAULT?
+      - php{{ php_version }}-fpm           # Moved from nginx role
     state: present
 
 # For PHP >= 8.0: phpX.Y-json is baked into PHP itself.

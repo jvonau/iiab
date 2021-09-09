@@ -1,6 +1,8 @@
 - name: 'Install package: awstats'
   package:
-    name: awstats
+    name:
+      - awstats
+      - php{{ php_version }}-fpm    # Moved from nginx role
     state: present
 
 # - name: 'Install package: pwauth (when: apache_installed is defined)'
