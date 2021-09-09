@@ -7,7 +7,7 @@
 location ~ ^/{{ mediawiki_symlink }}/(index|load|api|thumb|opensearch_desc)\.php$ {
     include fastcgi_params;
     fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-    fastcgi_pass php; # or whatever port your PHP-FPM listens on
+    fastcgi_pass unix:/run/php/php{{ php_version }}-fpm.sock; # or whatever port your PHP-FPM listens on
 }
 
 # Images
@@ -41,7 +41,7 @@ location ~ ^/{{ mediawiki_symlink }}/(skins|extensions)/.+\.(css|js|gif|jpg|jpeg
 #    location ~ \.php$ {
 #        include /etc/nginx/fastcgi_params;
 #        fastcgi_param SCRIPT_FILENAME $document_root/{{ mediawiki_symlink }}/mw-config/$fastcgi_script_name;
-#        fastcgi_pass 127.0.0.1:9000; # or whatever port your PHP-FPM listens on
+#        fastcgi_pass unix:/run/php/php{{ php_version }}-fpm.sock; # or whatever port your PHP-FPM listens on
 #    }
 #}
 

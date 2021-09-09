@@ -10,16 +10,6 @@ server {
     # let individual services drop location blocks in conf.d
     include {{ nginx_conf_dir }}/*;
 
-    location ~ .*\.php$ {
-        proxy_set_header X-Real-IP  $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_set_header Host $host;
-        fastcgi_pass php;
-        fastcgi_index index.php;
-        fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_param SCRIPT_NAME $fastcgi_script_name;
-        include fastcgi_params;
     }
 
     # 2021-07-30: Security risk identified by @tim-moody

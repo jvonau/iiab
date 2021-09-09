@@ -8,7 +8,7 @@ location ~ ^/osm-vector-maps(.*)\.php(.*)$ {
     proxy_set_header X-Real-IP  $remote_addr;
     proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header Host $host;
-    fastcgi_pass php;
+    fastcgi_pass unix:/run/php/php{{ php_version }}-fpm.sock;
     fastcgi_index index.html;
     include fastcgi_params;
     fastcgi_split_path_info ^(.+\.php)(.*)$;

@@ -5,14 +5,14 @@ location {{ wp_url }} {
 
     location ~ .*\.php$ {
         include fastcgi_params;
-        fastcgi_pass php;
+        fastcgi_pass unix:/run/php/php{{ php_version }}-fpm.sock;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     }
 
     location ~ ^({{ wp_url }})(/.*)/$ {
         include fastcgi_params;
-        fastcgi_pass php;
+        fastcgi_pass unix:/run/php/php{{ php_version }}-fpm.sock;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME {{ wp_abs_path }}/index.php;
     }

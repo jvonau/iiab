@@ -95,10 +95,4 @@ http {
 
     # include other sites
     include /etc/nginx/sites-enabled/*.conf;
-
-    # define the upstream backend fastcgi for php
-    upstream php {
-        server unix:/run/php/php{{ php_version }}-fpm.sock;
-    }
-           
 }
