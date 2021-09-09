@@ -10,7 +10,10 @@
     state: absent
   when: not osm_vector_maps_enabled
 
-- name: Reload 'nginx' systemd service
+- name: Restart 'nginx' & 'php{{ php_version }}-fpm' systemd services
   systemd:
-    name: nginx
-    state: reloaded
+    name: "{{ item }}"
+    state: restarted
+  with_items:
+    - nginx
+    - php{{ php_version }}-fpm
