@@ -54,3 +54,25 @@
 #    path: /etc/sudoers
 #    line: "{{ iiab_admin_user }} ALL=(ALL) NOPASSWD: ALL"
 ##    line: "%wheel ALL= NOPASSWD: ALL"
+
+# Idea: institute precautionary system-wide published password warning(s)
+# for user iiab-admin / g0adm1n, i.e. {{ iiab_admin_user }} with password
+# {{ iiab_admin_published_pwd }}, regardless whether the password is set:
+#
+# (1) by the OS installer
+# (2) by the OS's graphical desktop tools
+# (3) at the command-line: sudo passwd iiab-admin
+# (4) by IIAB's 1-line installer: http://download.iiab.io
+# (5) by this role: roles/iiab-admin/tasks/admin-user.yml
+# (6) by IIAB's Admin Console during installation
+# ...and/or...
+# (7) by IIAB's Admin Console > Utilities > Change Password
+
+- name: Install password warning(s)
+  include_tasks: pwd-warnings.yml
+
+# RECORD iiab-admin AS INSTALLED
+
+- name: "Set 'iiab_admin_installed: True'"
+  set_fact:
+    iiab_admin_installed: True
