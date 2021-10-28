@@ -104,6 +104,8 @@ dns_jail_enabled: False
 
 
 # 1-PREP
+remoteit_install: False
+remoteit_enabled: False
 
 # SSHD runs here & also below in 4-SERVER-OPTIONS
 sshd_install: True    # Required by OpenVPN
