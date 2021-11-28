@@ -22,7 +22,7 @@
 #   (2) roles/network/tasks/named.yml
 # ...after it is set in 0-init/tasks/main.yml
 first_run: False
-rpi_model: none                 # 2021-07-30: Broadly used!
+arm_model: none                 # 2021-07-30: Broadly used!
 #xo_model: none                 # 2021-07-30: No longer used
 # 2021-07-30: Recorded to /etc/iiab/iiab.ini but not used programmatically:
 gw_active: False

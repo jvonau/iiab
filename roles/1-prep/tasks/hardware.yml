@@ -2,7 +2,7 @@
 # Put conditional actions for hardware platforms here
 
 - include_tasks: raspberry_pi.yml
-  when: first_run and rpi_model != "none"
+  when: first_run and arm_model is search("Raspberry")
 
 - name: Check if the identifier for Intel's NUC6 built-in WiFi is present
   shell: "lsusb | grep 8087:0a2b | wc | awk '{print $1}'"

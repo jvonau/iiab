@@ -44,7 +44,7 @@
 - name: Install Bluetooth - only on Raspberry Pi
   include_role:
     name: bluetooth
-  when: bluetooth_install and rpi_model != "none"
+  when: bluetooth_install and arm_model is search("Raspberry")
 
 - name: USB_LIB
   include_role:

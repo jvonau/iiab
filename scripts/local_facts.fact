@@ -15,7 +15,7 @@ VERSION_ID="none"    # This var's combined with the above, before being output
 IIAB_BRANCH="none"
 IIAB_COMMIT="none"
 #XO_MODEL="none"
-RPI_MODEL="none"
+ARM_MODEL="none"
 ANSIBLE_VERSION="none"
 DHCPCD="none"    # The last 3 conditioned on string output not RC.  SEE BELOW.
 NETWORK_MANAGER="none"
@@ -95,7 +95,7 @@ tmp=$(git rev-parse --verify HEAD) &&
 #    XO_MODEL=$tmp
 
 tmp=$(cat /proc/device-tree/model) &&
-    RPI_MODEL=$tmp
+    ARM_MODEL=$tmp
 
 tmp=$(ansible --version) &&
     ANSIBLE_VERSION=$(echo "$tmp" | head -1 | cut -f 2- -d " " | sed 's/.* \([^ ]*\)\].*/\1/')
@@ -133,7 +133,7 @@ cat <<EOF
 "systemd_networkd"        : "$SYSTEMD_NETWORKD",
 "iiab_branch"             : "$IIAB_BRANCH",
 "iiab_commit"             : "$IIAB_COMMIT",
-"rpi_model"               : "$RPI_MODEL",
+"arm_model"               : "$ARM_MODEL",
 "ansible_version"         : "$ANSIBLE_VERSION",
 "os"                      : "$OS",
 "os_ver"                  : "$OS_VER"}

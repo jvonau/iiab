@@ -7,9 +7,9 @@
 
 # Higher-level purpose explained at the bottom of:
 # https://github.com/iiab/iiab/blob/master/vars/default_vars.yml
-- name: "Ansible just ran /etc/ansible/facts.d/local_facts.fact to set 10 vars -- here we extract 2 of those -- rpi_model: {{ ansible_local.local_facts.rpi_model }}, iiab_stage: {{ ansible_local.local_facts.stage }}"
+- name: "Ansible just ran /etc/ansible/facts.d/local_facts.fact to set 10 vars -- here we extract 2 of those -- arm_model: {{ ansible_local.local_facts.arm_model }}, iiab_stage: {{ ansible_local.local_facts.stage }}"
   set_fact:
-    rpi_model: "{{ ansible_local.local_facts.rpi_model }}"
+    arm_model: "{{ ansible_local.local_facts.arm_model }}"
     #xo_model: "{{ ansible_local.local_facts.xo_model }}"
     iiab_stage: "{{ ansible_local.local_facts.stage }}"
 
@@ -91,8 +91,8 @@
       value: "{{ gw_active }}"
     - option: internet_available
       value: "{{ internet_available }}"
-    - option: rpi_model
-      value: "{{ rpi_model }}"
+    - option: arm_model
+      value: "{{ arm_model }}"
     - option: first_run
       value: "{{ first_run }}"
     - option: local_tz    # e.g. 'EDT' (summer) or 'EST' (winter) after Ansible interprets symlink /etc/localtime -- or 'UTC' if /etc/localtime doesn't exist

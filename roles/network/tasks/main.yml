@@ -1,7 +1,7 @@
 - name: Select RPi firmware mode
   include_role:
     name: firmware
-  when: rpi_model != "none"
+  when: arm_model is search("Raspberry")
 
 - name: detected_network
   include_tasks: detected_network.yml
