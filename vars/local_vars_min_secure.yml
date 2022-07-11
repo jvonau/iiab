@@ -145,6 +145,8 @@ bluetooth_term_enabled: False
 
 
 # 1-PREP
+remoteit_install: False
+remoteit_enabled: False
 
 # SSHD runs here & also below in 4-SERVER-OPTIONS
 sshd_install: True    # Required by OpenVPN
@@ -330,7 +332,7 @@ sugarizer_enabled: False
 # 8-MGMT-TOOLS
 
 # BitTorrent downloader for large Content Packs etc
-transmission_install: False
+transmission_install: True
 transmission_enabled: False
 # A. UNCOMMENT LANGUAGE(S) TO DOWNLOAD KA Lite VIDEOS TO /library/transmission
 #    using http://pantry.learningequality.org/downloads/ka-lite/0.17/content/
