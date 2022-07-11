@@ -156,7 +156,7 @@ sshd_enabled: True
 # e.g. iiab_admin_user_install, iiab_admin_user, iiab_admin_pwd_hash
 
 # SECURITY WARNING: See http://wiki.laptop.org/go/IIAB/Security
-openvpn_install: True
+openvpn_install: False
 openvpn_enabled: False
 # Set /etc/iiab/openvpn_handle in advance here:
 openvpn_handle: MIN-sized - Put Your Name Here
