@@ -226,6 +226,9 @@ mediawiki_enabled: False
 mosquitto_install: False
 mosquitto_enabled: False
 
+matomo_install: False
+matomo_enabled: False
+
 # Flow-based visual programming for wiring together IoT hardware devices etc
 nodered_install: False
 nodered_enabled: False
