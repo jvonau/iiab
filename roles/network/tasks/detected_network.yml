@@ -302,3 +302,4 @@
   fail:    # FORCE IT RED THIS ONCE!
     msg: "Undetectable gateway or prior gateway for use with static network addressing from admin-console use local_vars to declare user_wan_iface"
   when: adapter_count.stdout|int >=3 and gui_wan_iface == "unset" and gui_static_wan
+
