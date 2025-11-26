@@ -20,6 +20,8 @@ jobs:
         run: |
           sudo mkdir /etc/iiab
           sudo cp /opt/iiab/iiab/vars/local_vars_medium.yml /etc/iiab/local_vars.yml    # local_vars_medium, so ~15 IIAB Apps are installed
+      - run: ip a
+      - run: ip r
       - run: sudo /opt/iiab/iiab/scripts/ansible    # Install Ansible
       - run: sudo ./iiab-install                    # Install IIAB!
         working-directory: /opt/iiab/iiab
