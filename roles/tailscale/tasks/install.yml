@@ -3,10 +3,13 @@
   register: df1
 
 
-- name: "Set up apt source (jammy) in /etc/apt/sources.list.d/tailscale.list and its key /usr/share/keyrings/tailscale-archive-keyring.gpg, to install Tailscale"
+- name: "Set up apt source (noble) in /etc/apt/sources.list.d/tailscale.list and its key /usr/share/keyrings/tailscale-archive-keyring.gpg, to install Tailscale"
   shell: |
-    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg > /usr/share/keyrings/tailscale-archive-keyring.gpg
-    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list > /etc/apt/sources.list.d/tailscale.list
+    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg > /usr/share/keyrings/tailscale-archive-keyring.gpg
+    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list > /etc/apt/sources.list.d/tailscale.list
+
+- name: "Run apt -y modernize-sources - moves tailscale.list to deb822 format tailscale.sources"
+  shell: apt -y modernize-sources
 
 - name: "Install packages: jq, sudo, tailscale"
   package:
