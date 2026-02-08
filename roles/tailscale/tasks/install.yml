@@ -2,6 +2,11 @@
   shell: df -B1 --output=used / | tail -1
   register: df1
 
+# https://github.com/iiab/iiab/pull/4234#issuecomment-3775698711
+# https://manpages.debian.org/unstable/apt/apt-key.8.en.html
+# Since APT 2.4, /etc/apt/keyrings is provided as the recommended location for keys not managed by packages
+# dpkg -L tailscale-archive-keyring
+# tailscale pulls in deb package tailscale-archive-keyring to update /usr/share/keyrings/tailscale-archive-keyring.gpg, so /usr/share/keyrings would be correct
 
 - name: "Set up apt source (noble) in /etc/apt/sources.list.d/tailscale.list and its key /usr/share/keyrings/tailscale-archive-keyring.gpg, to install Tailscale"
   shell: |
@@ -18,6 +23,7 @@
       #- nmap
       - jq      # JSON parser used by /usr/bin/iiab-support == /usr/bin/iiab-vpn
       - sudo    # (1) Should be installed prior to installing IIAB, (2) Can also be installed by 1-prep here, (3) Is definitely installed by 1-prep's roles/iiab-admin/tasks/sudo-prereqs.yml, (4) Used to be installed by roles/2-common/tasks/packages.yml (but that's too late!)
+      - tailscale-archive-keyring    # apt info tailscale - don't rely on Recommends: to install this package
       - tailscale
     update_cache: yes
 
