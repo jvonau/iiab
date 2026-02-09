@@ -15,7 +15,8 @@
 
 - name: "Run apt -y modernize-sources - moves tailscale.list to deb822 format tailscale.sources 'Debain > 12' or 'Ubuntu > 24'"
   shell: apt -y modernize-sources
-  when: (is_debian and os_ver is search('13', '>=')) or (is_ubuntu and ansible_distribution_version|int >= 25)
+  #when: (is_debian and os_ver is search('13', '>=')) or (is_ubuntu and ansible_facts.distribution_version|int >= 25)
+  when: (is_debian and os_ver is search('13', '>=')) or (is_ubuntu and os_ver is version('ubuntu-2504', '>='))
 
 - name: "Install packages: jq, sudo, tailscale"
   package:
