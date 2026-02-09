@@ -13,8 +13,9 @@
     curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg > /usr/share/keyrings/tailscale-archive-keyring.gpg
     curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list > /etc/apt/sources.list.d/tailscale.list
 
-- name: "Run apt -y modernize-sources - moves tailscale.list to deb822 format tailscale.sources"
+- name: "Run apt -y modernize-sources - moves tailscale.list to deb822 format tailscale.sources 'Debain > 12' or 'Ubuntu > 24'"
   shell: apt -y modernize-sources
+  when: (is_debian and os_ver is search('13', '>=')) or (is_ubuntu and ansible_distribution_version|int >= 25)
 
 - name: "Install packages: jq, sudo, tailscale"
   package:
