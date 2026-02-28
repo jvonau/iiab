@@ -58,6 +58,9 @@ jobs:
           STATE_FILE=$(find . -maxdepth 1 -name "*.state" | head -n 1)
           source "$STATE_FILE"
 
+          echo "VM image is $MOUNT_DIR mounted at:"
+          mount | grep loop
+
           VERSION=$(grep '^iiab_base_ver:' ../iiab/vars/default_vars.yml | awk '{print $2}')
           echo "IIAB_BASE_VERSION=$VERSION" >> $GITHUB_ENV
           DATE=$(date +'%y%m%d')
@@ -95,7 +98,6 @@ jobs:
 
           # Manually setting DNS can help avoid host loopback/127.0.0.53 issues
           # echo "nameserver 1.1.1.1" >> "$MOUNT_DIR/etc/resolv.conf"
-          echo "VM image is $MOUNT_DIR"
 
           sed 's/^          //' << 'EOF_PRESET' > "$MOUNT_DIR/root/install_preset.sh"
           #!/bin/bash
