@@ -121,6 +121,13 @@ jobs:
           #set timeout 7200
 
           #spawn systemd-nspawn -q --network-veth --resolv-conf=off -D $env(MOUNT_DIR) -M box --boot
+          mount --bind /dev "${MOUNT_DIR}"/dev
+          mount -t proc none "${MOUNT_DIR}"/proc
+          mount -t sysfs none "${MOUNT_DIR}"/sys
+          mount -t devpts none "${MOUNT_DIR}"/dev/pts
+          mount -t tmpfs tmpfs "${MOUNT_DIR}"/run
+          mount -t tmpfs tmpfs "${MOUNT_DIR}"/tmp
+
           sed 's/^          //' << 'EOF_CHROOT' > "$MOUNT_DIR/root/builder.sh"
           #!/bin/bash
           set -euo pipefail
@@ -142,6 +149,14 @@ jobs:
           chmod 0755 $MOUNT_DIR/root/builder.sh
           chroot $MOUNT_DIR /root/builder.sh
           # could clean up builder at this point
+
+          umount "${MOUNT_DIR}"/run
+          umount "${MOUNT_DIR}"/tmp
+          umount "${MOUNT_DIR}"/dev/pts
+          umount "${MOUNT_DIR}"/dev
+          umount "${MOUNT_DIR}"/sys
+          umount "${MOUNT_DIR}"/proc
+
 
       - name: Validation
         working-directory: nspawn-loop
