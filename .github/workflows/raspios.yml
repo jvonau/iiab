@@ -95,6 +95,7 @@ jobs:
 
           # Manually setting DNS can help avoid host loopback/127.0.0.53 issues
           # echo "nameserver 1.1.1.1" >> "$MOUNT_DIR/etc/resolv.conf"
+          echo "VM image is $MOUNT_DIR"
 
           sed 's/^          //' << 'EOF_PRESET' > "$MOUNT_DIR/root/install_preset.sh"
           #!/bin/bash
