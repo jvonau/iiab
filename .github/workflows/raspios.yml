@@ -137,8 +137,9 @@ jobs:
           apt update
           mkdir -p /etc/initramfs-tools/conf.d
           echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf
-          apt install curl
+          apt upgrade
 
+          apt install curl
           curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab
           chmod 0755 /usr/sbin/iiab
           /usr/sbin/iiab --risky
