@@ -99,56 +99,48 @@ jobs:
           # Manually setting DNS can help avoid host loopback/127.0.0.53 issues
           # echo "nameserver 1.1.1.1" >> "$MOUNT_DIR/etc/resolv.conf"
 
-          sed 's/^          //' << 'EOF_PRESET' > "$MOUNT_DIR/root/install_preset.sh"
+          #sed 's/^          //' << 'EOF_PRESET' > "$MOUNT_DIR/root/install_preset.sh"
+          #!/bin/bash
+          #set -euo pipefail
+          #cd /opt/admin/cmdsrv
+
+          #scripts/get_kiwix_catalog
+          #scripts/get_oer2go_catalog
+
+          #if [ -n "${{ matrix.preset_id }}" ]; then
+          #    iiab-cmdsrv-ctl 'INST-PRESETS {"preset_id":"${{ matrix.preset_id }}"}'
+          #fi
+
+          #rm -f /root/install_preset.sh
+          #EOF_PRESET
+          #chmod +x "$MOUNT_DIR/root/install_preset.sh"
+
+          #systemd-firstboot --root="$MOUNT_DIR" --delete-root-password --force
+          #export MOUNT_DIR
+          #sed 's/^          //' << 'EXPECT_EOF' | expect
+          #set timeout 7200
+
+          #spawn systemd-nspawn -q --network-veth --resolv-conf=off -D $env(MOUNT_DIR) -M box --boot
+          sed 's/^          //' << 'EOF_CHROOT' > "$MOUNT_DIR/root/builder.sh"
           #!/bin/bash
           set -euo pipefail
-          cd /opt/admin/cmdsrv
 
-          scripts/get_kiwix_catalog
-          scripts/get_oer2go_catalog
+          export DEBIAN_FRONTEND=noninteractive
 
-          if [ -n "${{ matrix.preset_id }}" ]; then
-              iiab-cmdsrv-ctl 'INST-PRESETS {"preset_id":"${{ matrix.preset_id }}"}'
-          fi
+          apt update
+          mkdir -p /etc/initramfs-tools/conf.d
+          echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf
+          apt install curl
 
-          rm -f /root/install_preset.sh
-          EOF_PRESET
-          chmod +x "$MOUNT_DIR/root/install_preset.sh"
+          curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab
+          chmod 0755 /usr/sbin/iiab
+          /usr/sbin/iiab --risky
 
-          systemd-firstboot --root="$MOUNT_DIR" --delete-root-password --force
-          export MOUNT_DIR
-          sed 's/^          //' << 'EXPECT_EOF' | expect
-          set timeout 7200
+          usermod --lock --expiredate=1 root
+          EOF_CHROOT
 
-          spawn systemd-nspawn -q --network-veth --resolv-conf=off -D $env(MOUNT_DIR) -M box --boot
-          expect "login: " { send "root\r" }
-
-          expect -re {#\s?$} { send "apt update\r" }
-          expect -re {#\s?$} { send "mkdir -p /etc/initramfs-tools/conf.d && echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf\r" }
-          expect -re {#\s?$} { send "DEBIAN_FRONTEND=noninteractive apt upgrade -y\r" }
-
-          expect -re {#\s?$} { send "curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab\r" }
-          expect -re {#\s?$} { send "chmod 0755 /usr/sbin/iiab\r" }
-          expect -re {#\s?$} { send "/usr/sbin/iiab --risky\r" }
-          expect {
-              timeout { puts "\nTimed out waiting for final confirmation prompt"; exit 1 }
-              "photographed" { send "\r" }
-          }
-          # forced reboot
-          expect "login: " { send "root\r" }
-
-          expect -re {#\s?$} { send "/root/install_preset.sh\r" }
-
-          expect -re {#\s?$} { send "usermod --lock --expiredate=1 root\r" }
-
-          # legacy whiptail TUI OOBE, replaced by cloud-init / rpi-imager
-          # expect -re {#\s?$} { send "systemctl disable userconfig.service\r" }
-
-          expect -re {#\s?$} { send "shutdown now\r" }
-          expect eof
-          EXPECT_EOF
-
-          EOF
+          chroot /raspios_lite_arm64_latest.img.state /root/builder.sh
+          # could clean up builder at this point
 
       - name: Validation
         working-directory: nspawn-loop
