@@ -79,22 +79,22 @@ jobs:
           echo "rpi_image: True" >> "$MOUNT_DIR/etc/iiab/local_vars.yml"
           sed -i "s/^iiab_admin_user_install: True/iiab_admin_user_install: False/" "$MOUNT_DIR/etc/iiab/local_vars.yml"
 
-          if ! command -v expect &>/dev/null; then
-              apt-get update && apt-get install -y expect
-          fi
-          if ! command -v systemd-nspawn &> /dev/null; then
-              apt-get update && apt-get install -y systemd-container
-          fi
+          #if ! command -v expect &>/dev/null; then
+          #    apt-get update && apt-get install -y expect
+          #fi
+          #if ! command -v systemd-nspawn &> /dev/null; then
+          #    apt-get update && apt-get install -y systemd-container
+          #fi
 
           systemctl is-active --quiet systemd-networkd || systemctl start systemd-networkd
           systemctl is-active --quiet systemd-resolved || systemctl start systemd-resolved
 
           # Explicitly allow forwarding for systemd-nspawn virtual interfaces
-          sysctl -w net.ipv4.ip_forward=1
-          EXT_IF=$(ip route | grep default | awk '{print $5}' | head -n1)
-          iptables -t nat -A POSTROUTING -o "$EXT_IF" -j MASQUERADE
-          iptables -A FORWARD -i ve-+ -o "$EXT_IF" -j ACCEPT
-          iptables -A FORWARD -i "$EXT_IF" -o ve-+ -m state --state RELATED,ESTABLISHED -j ACCEPT
+          #sysctl -w net.ipv4.ip_forward=1
+          #EXT_IF=$(ip route | grep default | awk '{print $5}' | head -n1)
+          #iptables -t nat -A POSTROUTING -o "$EXT_IF" -j MASQUERADE
+          #iptables -A FORWARD -i ve-+ -o "$EXT_IF" -j ACCEPT
+          #iptables -A FORWARD -i "$EXT_IF" -o ve-+ -m state --state RELATED,ESTABLISHED -j ACCEPT
 
           # Manually setting DNS can help avoid host loopback/127.0.0.53 issues
           # echo "nameserver 1.1.1.1" >> "$MOUNT_DIR/etc/resolv.conf"
@@ -139,7 +139,7 @@ jobs:
           usermod --lock --expiredate=1 root
           EOF_CHROOT
 
-          chroot /raspios_lite_arm64_latest.img /root/builder.sh
+          chroot /raspios_lite_arm64_latest /root/builder.sh
           # could clean up builder at this point
 
       - name: Validation
