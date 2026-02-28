@@ -139,7 +139,7 @@ jobs:
           usermod --lock --expiredate=1 root
           EOF_CHROOT
 
-          chroot /raspios_lite_arm64_latest /root/builder.sh
+          chroot $MOUNT_DIR /root/builder.sh
           # could clean up builder at this point
 
       - name: Validation
