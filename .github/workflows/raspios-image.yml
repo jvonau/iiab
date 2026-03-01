@@ -156,7 +156,9 @@ jobs:
           umount "${MOUNT_DIR}"/dev
           umount "${MOUNT_DIR}"/sys
           umount "${MOUNT_DIR}"/proc
+          echo "box" > /etc/hostname
 
+          EOF
 
       - name: Validation
         working-directory: nspawn-loop
