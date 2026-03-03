@@ -83,6 +83,8 @@ jobs:
           systemctl is-active --quiet systemd-networkd || systemctl start systemd-networkd
           systemctl is-active --quiet systemd-resolved || systemctl start systemd-resolved
 
+          mount
+          ls -la /*/*
           # based on https://github.com/jvonau/mk-image/blob/main/mkarm-image.sh
           mount --bind /dev "${MOUNT_DIR}"/dev
           mount -t proc none "${MOUNT_DIR}"/proc
@@ -94,10 +96,12 @@ jobs:
           EOF
 
       - name: Build image
-        working-directory: nspawn-loop/raspios_lite_arm64_latest
+        working-directory: nspawn-loop
         run: |
-          sudo -E bash << 'EOF_CHROOT'
+          sudo -E bash << 'EOF'
           set -euo pipefail
+          STATE_FILE=$(find . -maxdepth 1 -name "*.state" | head -n 1)
+          sudo ./chroot.sh $STATE_FILE bash << 'EOF_CHROOT'
 
           export DEBIAN_FRONTEND=noninteractive
 
@@ -112,14 +116,21 @@ jobs:
 
           echo "box" > /etc/hostname
           /usr/sbin/iiab --risky
+          exit
 
           EOF_CHROOT
+
+          EOF
 
       - name: Cleanup CHROOT
         working-directory: nspawn-loop
         run: |
           sudo -E bash << 'EOF'
           set -euo pipefail
+
+          STATE_FILE=$(find . -maxdepth 1 -name "*.state" | head -n 1)
+          source "$STATE_FILE"
+
           umount "${MOUNT_DIR}"/run
           umount "${MOUNT_DIR}"/tmp
           umount "${MOUNT_DIR}"/dev/pts
