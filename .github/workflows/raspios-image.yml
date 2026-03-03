@@ -49,7 +49,7 @@ jobs:
         working-directory: nspawn-loop
         run: sudo ./mount.sh https://downloads.raspberrypi.org/raspios_lite_arm64_latest ${{ matrix.working_image_size || 10000 }}
 
-      - name: Prepare image
+      - name: Prepare Builder
         working-directory: nspawn-loop
         run: |
           sudo -E bash << 'EOF'
@@ -91,11 +91,10 @@ jobs:
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/tmp
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/run
           mkdir -p "${MOUNT_DIR}"/run/lock
-          #export MOUNT_DIR="${MOUNT_DIR}"
           EOF
 
       - name: Build image
-        working-directory: "${MOUNT_DIR}"
+        working-directory: nspawn-loop/raspios_lite_arm64_latest
         run: |
           sudo -E bash << 'EOF_CHROOT'
           set -euo pipefail
