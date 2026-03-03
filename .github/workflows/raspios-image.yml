@@ -91,7 +91,7 @@ jobs:
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/tmp
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/run
           mkdir -p "${MOUNT_DIR}"/run/lock
-          export MOUNT_DIR="${MOUNT_DIR}"
+          #export MOUNT_DIR="${MOUNT_DIR}"
           EOF
 
       - name: Build image
