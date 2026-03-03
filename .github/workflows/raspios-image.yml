@@ -91,10 +91,11 @@ jobs:
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/tmp
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/run
           mkdir -p "${MOUNT_DIR}"/run/lock
+          export MOUNT_DIR="${MOUNT_DIR}"
           EOF
 
       - name: Build image
-        working-directory: nspawn-loop
+        working-directory: "${MOUNT_DIR}"
         run: |
           sudo -E bash << 'EOF_CHROOT'
           set -euo pipefail
