@@ -49,7 +49,7 @@ jobs:
         working-directory: nspawn-loop
         run: sudo ./mount.sh https://downloads.raspberrypi.org/raspios_lite_arm64_latest ${{ matrix.working_image_size || 10000 }}
 
-      - name: Build image
+      - name: Prepare image
         working-directory: nspawn-loop
         run: |
           sudo -E bash << 'EOF'
@@ -91,9 +91,12 @@ jobs:
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/tmp
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/run
           mkdir -p "${MOUNT_DIR}"/run/lock
+          EOF
 
-          sed 's/^          //' << 'EOF_CHROOT' > "$MOUNT_DIR/root/builder.sh"
-          #!/bin/bash
+      - name: Build image
+        working-directory: nspawn-loop
+        run: |
+          sudo -E bash << 'EOF_CHROOT'
           set -euo pipefail
 
           export DEBIAN_FRONTEND=noninteractive
@@ -112,10 +115,11 @@ jobs:
 
           EOF_CHROOT
 
-          chmod 0755 $MOUNT_DIR/root/builder.sh
-          echo "Entering CHROOT"
-          chroot $MOUNT_DIR /root/builder.sh
-
+      - name: Cleanup CHROOT
+        working-directory: nspawn-loop
+        run: |
+          sudo -E bash << 'EOF'
+          set -euo pipefail
           umount "${MOUNT_DIR}"/run
           umount "${MOUNT_DIR}"/tmp
           umount "${MOUNT_DIR}"/dev/pts
