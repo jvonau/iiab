@@ -311,8 +311,8 @@ jobs:
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
-        working-directory: nspawn-loop
         with:
+          working-directory: nspawn-loop
           files: |
             nspawn-loop/iiab-desktop.rpi-imager-manifest.zip
             nspawn-loop/${{ env.IMG_NAME }}.xz
