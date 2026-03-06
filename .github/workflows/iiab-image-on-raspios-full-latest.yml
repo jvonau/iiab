@@ -310,8 +310,8 @@ jobs:
         run: zip iiab-desktop.rpi-imager-manifest.zip iiab.rpi-imager-manifest
 
       - name: Upload to Release
-        working-directory: nspawn-loop
         uses: softprops/action-gh-release@v1
+        working-directory: nspawn-loop
         with:
           files: |
             nspawn-loop/iiab-desktop.rpi-imager-manifest.zip
