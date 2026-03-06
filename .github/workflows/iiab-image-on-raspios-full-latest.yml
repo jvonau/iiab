@@ -280,26 +280,41 @@ jobs:
 
           python3 gen_manifest.py
 
-      - name: Upload iiab.rpi-imager-manifest
-        if: ${{ matrix.edition == 'tiny' }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: iiab-desktop.rpi-imager-manifest
-          path: nspawn-loop/iiab.rpi-imager-manifest
-          if-no-files-found: error
-          retention-days: 3
-          compression-level: 9
+#      - name: Upload iiab.rpi-imager-manifest
+#        if: ${{ matrix.edition == 'tiny' }}
+#        uses: actions/upload-artifact@v6
+#        with:
+#          name: iiab-desktop.rpi-imager-manifest
+#          path: nspawn-loop/iiab.rpi-imager-manifest
+#          if-no-files-found: error
+#          retention-days: 3
+#          compression-level: 9
 
-      - name: Upload image
-        if: ${{ matrix.edition == 'tiny' }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: ${{ env.IMG_NAME }}
-          path: nspawn-loop/${{ env.IMG_NAME }}
-          if-no-files-found: error
-          retention-days: 3
-          compression-level: 9
+#      - name: Upload image
+#        if: ${{ matrix.edition == 'tiny' }}
+#        uses: actions/upload-artifact@v6
+#        with:
+#          name: ${{ env.IMG_NAME }}
+#          path: nspawn-loop/${{ env.IMG_NAME }}
+#          if-no-files-found: error
+#
+#          retention-days: 3
+#          compression-level: 9
 
-      # - name: Compress image
-      #   working-directory: nspawn-loop
-      #   run: xz -v -9 -T0 --stdout "$IMG_NAME" > "$IMG_NAME.xz"
+      - name: Compress image
+        working-directory: nspawn-loop
+        run: xz -v -9 -T0 --stdout "$IMG_NAME" > "$IMG_NAME.xz"
+
+      - name: Zip rpi-imager-manifest
+        working-directory: nspawn-loop
+        run: zip iiab-desktop.rpi-imager-manifest.zip iiab.rpi-imager-manifest
+
+      - name: Upload to Release
+        working-directory: nspawn-loop
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            nspawn-loop/iiab-desktop.rpi-imager-manifest.zip
+            nspawn-loop/${{ env.IMG_NAME }}.xz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
