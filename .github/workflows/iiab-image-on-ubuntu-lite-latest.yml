@@ -138,10 +138,19 @@ jobs:
           sed 's/^          //' << 'EOF_NAG' >  "$MOUNT_DIR/etc/profile.d/iiab-refresh-warn.sh"
           #!/bin/bash
 
-          if [ -f /.iiab-image ] && [ ! -f /etc/iiab/install-flags/iiab-refreshed ]; then
+          if [ -f /.iiab-image ] && [ ! -f /.resize-rootfs ]  && [ ! -f /etc/iiab/install-flags/iiab-refreshed ]; then
               echo -e "\n\e[41;1mPlease run 'sudo iiab-refresh'!\e[0m"
           fi
           EOF_NAG
+
+          sed 's/^          //' << 'EOF_RESIZE' >  "$MOUNT_DIR/etc/profile.d/iiab-resize-warn.sh"
+          #!/bin/bash
+          if [ -f /.expand-rootfs ] || [ -f /.resize-rootfs ]; then
+              echo -e "\n\e[41;1mRoot filesystem resizing in operaton!\e[0m"
+              echo -e "Please exit and log back in a few minutes"
+          fi
+
+          EOF_RESIZE
 
           sed 's/^          //' << 'EOF_CHROOT' > "$MOUNT_DIR/root/builder.sh"
           #!/bin/bash
