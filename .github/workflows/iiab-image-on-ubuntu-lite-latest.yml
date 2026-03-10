@@ -91,7 +91,10 @@ jobs:
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/tmp
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/run
           mkdir -p "${MOUNT_DIR}"/run/lock
-
+          cat /etc/resolv.conf
+          mv "${MOUNT_DIR}"/etc/resolv.conf "${MOUNT_DIR}"/etc/resolv.conf.build
+          touch "${MOUNT_DIR}"/etc/resolv.conf
+          mount --bind /etc/resolv.conf "${MOUNT_DIR}"/etc/resolv.conf
           sed 's/^          //' << 'EOF_FRESHEN' >  "$MOUNT_DIR/usr/sbin/iiab-refresh"
           #!/bin/bash -e
           REBOOT=0
@@ -183,6 +186,8 @@ jobs:
           umount "${MOUNT_DIR}"/dev
           umount "${MOUNT_DIR}"/sys
           umount "${MOUNT_DIR}"/proc
+          umount "${MOUNT_DIR}"/etc/resolv.conf
+          mv "${MOUNT_DIR}"/etc/resolv.conf.build "${MOUNT_DIR}"/etc/resolv.conf
 
           EOF
 
