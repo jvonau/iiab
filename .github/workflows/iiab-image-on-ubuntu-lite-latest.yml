@@ -200,7 +200,7 @@ jobs:
           source "$STATE_FILE"
 
           diff \
-            <(sort ../iiab/.github/workflows/tests/expected_state_${{ matrix.edition }}_image.yml) \
+            <(sort ../iiab/.github/workflows/tests/expected_state_${{ matrix.edition }}_ubuntu_image.yml) \
             <(sort "$MOUNT_DIR/etc/iiab/iiab_state.yml")
 
           EOF
