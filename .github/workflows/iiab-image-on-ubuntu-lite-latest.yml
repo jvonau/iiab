@@ -165,7 +165,7 @@ jobs:
           echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf
           #apt -y full-upgrade
 
-          apt install curl
+          apt -y install curl
           curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab
           chmod 0755 /usr/sbin/iiab
 
