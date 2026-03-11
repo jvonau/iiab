@@ -123,7 +123,7 @@ jobs:
               echo "REBOOT NEEDED"
           fi
 
-          #apt -y full-upgrade
+          apt -y full-upgrade
 
           rm /tmp/apt.*
           touch /etc/iiab/install-flags/iiab-refreshed
@@ -163,7 +163,7 @@ jobs:
           apt update
           mkdir -p /etc/initramfs-tools/conf.d
           echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf
-          apt -y full-upgrade
+          #apt -y full-upgrade
 
           apt install curl
           curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab
