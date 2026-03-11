@@ -91,7 +91,6 @@ jobs:
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/tmp
           mount -t tmpfs tmpfs "${MOUNT_DIR}"/run
           mkdir -p "${MOUNT_DIR}"/run/lock
-          cat /etc/resolv.conf
           mv "${MOUNT_DIR}"/etc/resolv.conf "${MOUNT_DIR}"/etc/resolv.conf.build
           touch "${MOUNT_DIR}"/etc/resolv.conf
           mount --bind /etc/resolv.conf "${MOUNT_DIR}"/etc/resolv.conf
@@ -124,7 +123,7 @@ jobs:
               echo "REBOOT NEEDED"
           fi
 
-          apt -y full-upgrade
+          #apt -y full-upgrade
 
           rm /tmp/apt.*
           touch /etc/iiab/install-flags/iiab-refreshed
