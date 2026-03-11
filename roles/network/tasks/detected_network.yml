@@ -206,6 +206,7 @@
 # if there is more than one the last one wins
 - name: Fake out detection if rpi_image is defined
   set_fact:
+    systemd_networkd_active: True
     discovered_wireless_iface: wlan0
     hostapd_enabled: True
     can_be_ap: True
