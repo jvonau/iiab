@@ -109,8 +109,11 @@ jobs:
 
           echo "box" > /etc/hostname
           /usr/sbin/iiab --risky
-          killall dirmngr || true
+          # should have no processes running
+          ps -AH
           sleep 10
+
+          killall dirmngr || true
           EOF_CHROOT
 
           chmod 0755 $MOUNT_DIR/root/builder.sh
