@@ -117,6 +117,9 @@ jobs:
           sleep 10
 
           killall -9 packagekitd || true
+          killall -9 dirmngr || true
+          killall -9 gpg-agent || true
+
           EOF_CHROOT
 
           chmod 0755 $MOUNT_DIR/root/builder.sh
