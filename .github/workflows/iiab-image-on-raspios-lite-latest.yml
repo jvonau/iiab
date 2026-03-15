@@ -109,7 +109,8 @@ jobs:
 
           echo "box" > /etc/hostname
           /usr/sbin/iiab --risky
-
+          killall dirmngr || true
+          sleep 10
           EOF_CHROOT
 
           chmod 0755 $MOUNT_DIR/root/builder.sh
