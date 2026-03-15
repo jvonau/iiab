@@ -102,7 +102,9 @@ jobs:
           mkdir -p /etc/initramfs-tools/conf.d
           echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf
           apt -y full-upgrade
-
+          echo "DEBUG"
+          ps -AH
+          sleep 10
           apt install curl
           curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab
           chmod 0755 /usr/sbin/iiab
@@ -113,7 +115,7 @@ jobs:
           ps -AH
           sleep 10
 
-          killall dirmngr || true
+          killall -9 dirmngr || true
           EOF_CHROOT
 
           chmod 0755 $MOUNT_DIR/root/builder.sh
