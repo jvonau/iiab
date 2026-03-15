@@ -103,6 +103,11 @@ jobs:
           echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf
           apt -y full-upgrade
 
+          echo "DEBUG"
+          ps -AH
+          sleep 10
+          killall -9 packagekitd || true
+
           apt install curl
           curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab
           chmod 0755 /usr/sbin/iiab

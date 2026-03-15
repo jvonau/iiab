@@ -170,12 +170,17 @@ jobs:
           chmod 0755 /usr/sbin/iiab
 
           echo "box" > /etc/hostname
+          echo "DEBUG"
+          ps -AH
+          sleep 10
+          #killall -9 packagekitd || true
+
           /usr/sbin/iiab --risky
           # should have no processes running
           ps -AH
           sleep 10
 
-          killall dirmngr || true
+          #killall dirmngr || true
           EOF_CHROOT
 
           chmod 0755 $MOUNT_DIR/root/builder.sh
