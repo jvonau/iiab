@@ -10,3 +10,8 @@ pylibs_installed: True
 usb_lib_installed: True
 www_options_installed: True
 mysql_installed: True
+kiwix_installed: True
+kolibri_installed: True
+osm_vector_maps_installed: True
+captiveportal_installed: True
+calibreweb_installed: True
