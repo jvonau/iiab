@@ -1,0 +1,119 @@
+- name: Make serving directory (0755 by default)
+  file:
+    path: "{{ maps_serve_path }}"
+    state: directory
+    # mode: 0755
+
+- name: Make index file
+  template:
+    src: index.html.j2
+    dest: "{{ maps_serve_path }}/index.html"
+
+### maps.black ###
+
+- name: Install maps.black.js
+  copy:
+    src: maps.black.js
+    dest: "{{ maps_serve_path }}/maps.black.js"
+    mode: "0644"
+
+- name: Download the remaining basic maps.black javascript and styles (0644)
+  include_tasks: download_large_file.yml
+  vars:
+    dest_base_path: "{{ maps_serve_path }}"
+  with_items: "{{ maps_dot_black_js_and_styles }}"
+
+- name: Download naturalearth6 tiles
+  include_tasks: download_large_file.yml
+  vars:
+    dest_base_path: "{{ maps_serve_path }}"
+    item: "{{ maps_dot_black_naturalearth6_tiles }}"
+
+- name: Select naturalearth6 tiles
+  file:
+    src: "{{ maps_serve_path }}/{{ maps_dot_black_naturalearth6_tiles }}"
+    dest: "{{ maps_serve_path }}/{{ maps_dot_black_naturalearth6_symlink_name }}"
+    state: link
+
+- name: "Make sure maps_vector_quality has a valid value"
+  assert:
+    that: maps_dot_black_vector_tiles[maps_vector_quality] is defined
+    fail_msg: "Error: maps_vector_quality is set to an invalid value. See `maps_dot_black_vector_tiles` in https://github.com/iiab/iiab/blob/master/roles/maps/defaults/main.yml for valid values."
+    quiet: yes
+
+- name: Download vector tiles
+  include_tasks: download_large_file.yml
+  vars:
+    dest_base_path: "{{ maps_serve_path }}"
+    item: "{{ maps_dot_black_vector_tiles[maps_vector_quality] }}"
+
+- name: Select vector tiles (if openstreetmap)
+  file:
+    src: "{{ maps_serve_path }}/{{ maps_dot_black_vector_tiles[maps_vector_quality] }}"
+    dest: "{{ maps_serve_path }}/{{ maps_dot_black_osm_symlink_name }}"
+    state: link
+  when: maps_vector_quality != "ne"
+
+- name: Select vector tiles (if naturalearth)
+  file:
+    src: "{{ maps_serve_path }}/{{ maps_dot_black_vector_tiles[maps_vector_quality] }}"
+    dest: "{{ maps_serve_path }}/{{ maps_dot_black_ne_symlink_name }}"
+    state: link
+  when: maps_vector_quality == "ne"
+
+- name: "Make sure maps_satellite_zoom has a valid value"
+  assert:
+    that: maps_dot_black_satellite_tiles[maps_satellite_zoom] is defined
+    fail_msg: "Error: maps_satellite_zoom is set to an invalid value. See `maps_dot_black_satellite_tiles` in https://github.com/iiab/iiab/blob/master/roles/maps/defaults/main.yml for valid values."
+    quiet: yes
+
+- name: Download satellite tiles
+  include_tasks: download_large_file.yml
+  vars:
+    dest_base_path: "{{ maps_serve_path }}"
+    item: "{{ maps_dot_black_satellite_tiles[maps_satellite_zoom] }}"
+
+- name: Select satellite tiles
+  file:
+    src: "{{ maps_serve_path }}/{{ maps_dot_black_satellite_tiles[maps_satellite_zoom] }}"
+    dest: "{{ maps_serve_path }}/{{ maps_dot_black_satellite_symlink_name }}"
+    state: link
+
+- when: maps_terrain_zoom != "none"
+  block:
+    - name: "Make sure maps_terrain_zoom has a valid value"
+      assert:
+        that: maps_dot_black_terrain_tiles[maps_terrain_zoom] is defined
+        fail_msg: "Error: maps_terrain_zoom is set to an invalid value. See `maps_dot_black_terrain_tiles` in https://github.com/iiab/iiab/blob/master/roles/maps/defaults/main.yml for valid values."
+        quiet: yes
+
+    - name: Download terrain tiles
+      include_tasks: download_large_file.yml
+      vars:
+        dest_base_path: "{{ maps_serve_path }}"
+        item: "{{ maps_dot_black_terrain_tiles[maps_terrain_zoom] }}"
+
+    - name: Select terrain tiles
+      file:
+        src: "{{ maps_serve_path }}/{{ maps_dot_black_terrain_tiles[maps_terrain_zoom] }}"
+        dest: "{{ maps_serve_path }}/{{ maps_dot_black_terrain_symlink_name }}"
+        state: link
+
+# If the user goes back to "none", we want to delete the symlink that gives them terrain.
+# However, it will not delete the pmtiles file that it points to.
+- name: Unselect terrain tiles
+  file:
+    path: "{{ maps_serve_path }}/{{ maps_dot_black_terrain_symlink_name }}"
+    state: absent
+  when: maps_terrain_zoom == "none"
+
+### maplibre ###
+
+- name: Download maplibre javascript and styles (0644)
+  get_url:
+    url: "{{ unpkg_url }}/{{ item.url_subpath }}"
+    dest: "{{ maps_serve_path }}/{{ item.filename }}"
+    checksum: "sha256:{{ item.sha256sum }}"
+    mode: "0644"
+    timeout: "{{ download_timeout }}"
+  with_items: "{{ maplibre_js_and_styles }}"

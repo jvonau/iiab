@@ -1,20 +1,57 @@
+# 2022-07-22: Moved from detected_network.yml to netplan.yml AND restart.yml (REMOVE DUPLICATE CODE LATER?!)
+# - name: Figure out netplan file name
+#   shell: ls /etc/netplan
+#   register: netplan
+#   #ignore_errors: True # pre 17.10 doesn't use netplan
+#   when: is_ubuntu
+
+
 - name: Restart wpa_supplicant service
   systemd:
     name: "{{ item }}"
     state: restarted
   with_items:
     - wpa_supplicant
-  when: wifi_up_down and hostapd_enabled
+  when: wifi_up_down and hostapd_enabled and not network_manager_active
 
-- name: Reload netplan for Wifi gateway on Ubuntu 18+
-  shell: netplan apply
-  when: wifi_up_down and is_ubuntu and netplan.stdout.find("yaml") != -1
-
-- name: Start named service
+- name: Enable & Restart networkd-dispatcher.service
   systemd:
-    name: "{{ dns_service }}"
+    name: networkd-dispatcher
     state: restarted
-  when: named_enabled and named_install
+    enabled: yes
+    masked: no
+  when: systemd_networkd_active
+
+- name: Clone wifi if needed
+  systemd:
+    name: iiab-clone-wifi
+    state: restarted
+  when: wifi_up_down and can_be_ap and ansible_facts.ap0 is undefined and rpi_image is undefined
+
+- name: Waiting {{ hostapd_wait }} seconds for network to stabilize for ap0
+  shell: sleep {{ hostapd_wait }}
+  when: ansible_facts.ap0 is undefined
+
+- name: Restart hostapd when WiFi is present but not when using WiFi as gateway
+  systemd:
+    name: hostapd
+    state: restarted
+    daemon_reload: yes
+  when: hostapd_enabled and not no_net_restart and rpi_image is undefined
+
+# 2022-07-22: @jvonau suggests commenting this out as: "we really don't touch
+# any of the config files... netplan.yml renames one file if it's a container
+# build like on MATE, could possibly skip netplan.yml in future or toss that in
+# the mix now and see what shakes up" [ok, but keep netplan.yml as is for now]
+# - name: Reload netplan for Wifi gateway on Ubuntu 18+
+#   shell: netplan apply
+#   when: wifi_up_down and is_ubuntu and netplan.stdout.find("yaml") != -1
+
+#- name: Start named service
+#  systemd:
+#    name: "{{ dns_service }}"
+#    state: restarted
+#  when: named_enabled and named_install
 
 - name: Stop Squid service
   systemd:
@@ -23,17 +60,17 @@
   async: 120
   when: squid_install or squid_installed is defined
 
-- name: Stop DansGuardian
-  systemd:
-    name: dansguardian
-    state: stopped
-  when: dansguardian_install or dansguardian_installed is defined
+# - name: Stop DansGuardian
+#   systemd:
+#     name: dansguardian
+#     state: stopped
+#   when: dansguardian_install or dansguardian_installed is defined
 
-- name: Restart DansGuardian service (dansguardian) except Ubuntu which needs reboot to activate
-  systemd:
-    name: dansguardian
-    state: restarted
-  when: dansguardian_enabled and dansguardian_install and ( not is_ubuntu and iiab_stage|int < 4 )
+# - name: Restart DansGuardian service (dansguardian) except Ubuntu which needs reboot to activate
+#   systemd:
+#     name: dansguardian
+#     state: restarted
+#   when: dansguardian_enabled and dansguardian_install and ( not is_ubuntu and iiab_stage|int < 4 )
 
 # Squid get re-loaded with dispatcher.d
 - name: Restart Squid service ({{ proxy }})
@@ -42,30 +79,30 @@
     state: restarted
   when: squid_enabled and squid_install
 
-- name: Restart Wondershaper service (wondershaper)
-  systemd:
-    name: wondershaper
-    state: restarted
-  when: wondershaper_enabled
+# - name: Restart Wondershaper service (wondershaper)
+#   systemd:
+#     name: wondershaper
+#     state: restarted
+#   when: wondershaper_enabled
 
 - name: Restart Avahi service (avahi-daemon)
   systemd:
     name: avahi-daemon
     state: restarted
 
-#netplan de-configures pre-created bridged interfaces 
+#netplan de-configures pre-created bridged interfaces
 #- name: Reload netplan when Wifi is not gateway on Ubuntu 18+
 #  shell: netplan apply
 #  when: not no_net_restart and is_ubuntu and netplan.stdout.find("yaml") != -1
 
-- name: Waiting {{ hostapd_wait }} seconds for network to stabilize (dnsmasq will fail if br0 isn't in a 'up' state!)
-  shell: sleep {{ hostapd_wait }}
+#- name: Waiting {{ hostapd_wait }} seconds for network to stabilize (dnsmasq will fail if br0 isn't in a 'up' state!)
+#  shell: sleep {{ hostapd_wait }}
 
 - name: Run /usr/bin/iiab-gen-iptables
   command: /usr/bin/iiab-gen-iptables
 
 - name: Checking if WiFi slave is active
-  shell: brctl show br0 | grep {{ iiab_wireless_lan_iface }} | wc -l
+  shell: bridge -d link | grep {{ iiab_wireless_lan_iface }} | wc -l
 #  when: hostapd_enabled and discovered_wireless_iface != iiab_wan_iface and iiab_lan_iface == "br0"
   when: hostapd_enabled and iiab_lan_iface == "br0"
   register: wifi_slave
@@ -74,16 +111,19 @@
   systemd:
     name: hostapd
     state: restarted
-  when: hostapd_enabled and wifi_slave.stdout is defined and wifi_slave.stdout == 0
+  when: hostapd_enabled and not no_net_restart and wifi_slave.stdout is defined and wifi_slave.stdout == 0 and rpi_image is undefined
 
-#both interfaces.d and systemd-networkd should have br0 available and Appliance lacks br0
+#systemd-networkd should have br0 available if hostapd was started and Appliance lacks br0
 #keep an eye on legacy wifi installs where br0 is present but not 'online' with an ip address
-#due to hostapd didn't go to a carrier state. All others should get dnsmasq restarted
-- name: User choice of dnsmasq or dhcpd - restarting {{ dhcp_service2 }}
-  systemd:
-    name: "{{ dhcp_service2 }}"
-    state: restarted
-  when: (not no_net_restart or (is_ubuntu and wifi_up_down)) or (iiab_stage|int == 9)
+#due to hostapd didn't go to a carrier state. /etc/networkd-dispatcher/routable.d/dnsmasq.sh
+#starts dnsmasq when br0 appears
+#- name: Restarting dnsmasq
+#  systemd:
+#    name: dnsmasq
+#    state: restarted
+#  when: not no_net_restart and iiab_network_mode != "Appliance"
+  #dnsmasq_enabled and ((not no_net_restart or (is_ubuntu and wifi_up_down)) or (iiab_stage|int == 9))
+  #when: (not no_net_restart or (is_ubuntu and wifi_up_down)) or (iiab_stage|int == 9)
   #when: (not no_net_restart or (is_ubuntu_20 and wifi_up_down)) or (iiab_stage|int == 9)
   #when: (not no_net_restart or (is_ubuntu_20 and wifi_up_down))
   #when: (iiab_network_mode != "Appliance")    # Sufficient b/c br0 exists thanks to /etc/network/interfaces.d/iiab

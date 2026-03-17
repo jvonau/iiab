@@ -1,6 +1,6 @@
 # NM-debian.yml
-- name: Stopping services
-  include_tasks: down-debian.yml
+#- name: Stopping services
+#  include_tasks: down-debian.yml
 
 # provide keyfile layout like the XO's used way back.
 #- name: Create uuid for NM's keyfile store
@@ -11,7 +11,29 @@
 #  set_fact:
 #    gen_uuid: "{{ uuid_response.stdout_lines[0] }}"
 
-# systemd-networkd handles br0 except for Raspbian
+# systemd-networkd handles br0
+
+# 2025-10-25: just unblock the WiFi host_country_code becomes the fallback value in hostapd.conf
+# if NetworkManager didn't connect to upstream WiFi or cmdline.txt has set cfg80211.ieee80211_regdom
+# hostapd will overrule cmdline.txt
+- name: Run "nmcli radio wifi on" to unblock WiFi when RasPiOS
+  command: nmcli radio wifi on
+  when: is_raspbian and not discovered_wireless_iface == "none" and rpi_image is undefined
+
+# The running variable(s) in NM are rewritten to this file upon stopping the service.
+# The above toggles the WirelessEnabled= to true in NetworkManager.state
+#- name: Remove NetworkManager.state file that automatically blocks WiFi
+#  file:
+#    dest: /var/lib/NetworkManager/NetworkManager.state
+#    state: absent
+#  when: is_raspbian
+
+- name: Remove WiFi warning as country code is set via hostapd
+  file:
+    dest: /etc/profile.d/wifi-check.sh
+    state: absent
+  when: is_raspbian and hostapd_enabled
+
 - name: Remove stale br0 for NetworkManager
   file:
     dest: /etc/NetworkManager/system-connections/bridge-br0
@@ -21,14 +43,14 @@
   template:
     dest: /etc/NetworkManager/conf.d/ap0-manage.conf
     src: network/ap0-manage.conf
-    mode: 0644
-  when: wifi_up_down
+    mode: "0644"
+  when: discovered_wireless_iface != "none" and wifi_up_down
 
 - name: Copy manage.conf for NetworkManager when wifi_up_down False
   template:
     dest: /etc/NetworkManager/conf.d/wifi-manage.conf
     src: network/manage.conf.j2
-    mode: 0644
+    mode: "0644"
   when: discovered_wireless_iface != "none" and not wifi_up_down
 
 - name: Remove manage.conf for NetworkManager when wifi_up_down True
@@ -67,12 +89,18 @@
   template:
     dest: /etc/NetworkManager/system-connections/iiab-static
     src: network/NM-static.j2
-    mode: 0600
+    mode: "0600"
   when: wan_ip != "dhcp"
+
+- name: Use systemd-networkd to handle br0
+  set_fact:
+    systemd_networkd_active: True
+  when: iiab_lan_iface == "br0"
 
 - name: Reload systemd
   systemd:
     daemon_reload: yes
+  when: not no_net_restart or not iiab_lan_iface == "br0"
 
 - name: Restart the NetworkManager service
   systemd:

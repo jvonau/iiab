@@ -3,7 +3,7 @@
     path: /boot/firmware/usercfg.txt
     line: "enable_uart=0"
     state: present
-  when: rpi_model != "none" and is_ubuntu and (ansible_distribution_version is version('20.10', '<'))
+  when: rpi_model != "none" and is_ubuntu and (ansible_facts.distribution_version is version('20.10', '<'))
   #when: rpi_model != "none" and is_ubuntu and (ansible_distribution_release == "focal")
   # 2020-10-27 #2585: Ubuntu Desktop 20.10 has no /boot/firmware/usercfg.txt
 
@@ -28,12 +28,13 @@
     dest: "{{ item.dest }}"
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   with_items:
     - { src: 'bt-agent.service.j2', dest: '/etc/systemd/system/bt-agent.service' }
     - { src: 'bt-pan.service.j2', dest: '/etc/systemd/system/bt-pan.service' }
     - { src: 'bt-term.service.j2', dest: '/etc/systemd/system/bt-term.service' }
     - { src: 'network.conf.j2', dest: '/etc/bluetooth/network.conf' }
+    - { src: '99-iiab.conf.j2', dest: '/etc/sysctl.d/99-iiab.conf' }
 
 - name: Create bluetooth utility scripts
   template:
@@ -42,7 +43,7 @@
     dest: "{{ item.dest }}"
     owner: root
     group: root
-    mode: 0755
+    mode: "0755"
   with_items:
     - { src: 'iiab-bt-pan-on.j2', dest: '/usr/bin/iiab-bt-pan-on' }
     - { src: 'iiab-bt-pan-off.j2', dest: '/usr/bin/iiab-bt-pan-off' }

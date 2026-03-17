@@ -6,11 +6,14 @@ docker
 dokuwiki
 ejabberd
 ejabberd_xs
+elgg
 homepage
+httpd
 httpd-enable
 idmgr
 moodle-1.9
 nodogsplash
+openvpn
 osm
 owncloud
 pathagar

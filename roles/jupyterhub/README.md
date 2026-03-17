@@ -1,10 +1,95 @@
 ## JupyterHub programming environment with student Notebooks
 
-#### High Schools may want to consider JupyterHub to integrate coding with dynamic interactive graphing — A New Way to Think About Programming — allowing students to integrate science experiment results and program output within their notebook/document/blog:
+### CAUTION: Internet-in-a-Box (IIAB) does not support JupyterHub on 32-bit OS's, where installation will likely fail ([#3639](https://github.com/iiab/iiab/issues/3639)).
 
-* Jupyter Notebooks are widely used in the scientific community.
-* This IIAB package permits individual users to start using their own notebook on the server (http://box.lan/jupyterhub) without needing an individual server account.
-* Once a user signs in with a username and password, these credentials are stored, and are used thereafter to gain access to the user's files.
-* Individual folders are created for all student work in the path `/var/lib/protected/` &mdash; individual students will only be able to see their own work in that directory.
-* Students will not have any privileges outside of their own folder.
-* They may upload Jupyter Notebooks from a local machine, and download the current state of their work via a normal browser download.
+#### Secondary schools may want to consider JupyterHub to integrate coding with dynamic interactive graphing — A New Way to Think About Programming — allowing students to integrate science experiment results and program output within their own blog-like "Jupyter Notebooks."
+
+* Jupyter Notebooks are widely used in the scientific community:
+  * [Institutional FAQ](https://jupyterhub.readthedocs.io/en/stable/getting-started/institutional-faq.html)
+  * [Getting Started](https://jupyterhub.readthedocs.io/en/stable/getting-started/)
+  * [JupyterLab changelog](https://github.com/jupyterlab/jupyterlab/releases)
+  * [JupyterHub changelog](https://jupyterhub.readthedocs.io/en/stable/changelog.html#changelog)
+* Students create their own accounts on first use — e.g. at http://box.lan/jupyterhub — just as if they're logging in regularly (unfortunately the login screen doesn't make that clear, but the teacher _does not_ need to be involved!)
+  * A student can then sign in with their username and password, to gain access to their files (Jupyter Notebooks).
+  * The teacher should set and protect JupyterHub's overall `Admin` password, just in case.  As with student accounts, the login screen unfortunately doesn't make that clear — so just log in with username `Admin` — using any password that you want to become permanent.
+* Individual student folders are created in `/var/lib/private/` on your Internet-in-a-Box (IIAB) server:
+  * A student will only be able to see their own work — they do not have privileges outside of their own folder.
+  * Students may upload Jupyter Notebooks to the IIAB server, and download the current state of their work via a normal browser.
+  * Linux administrators can read more about JupyterHub's [Local Users](https://github.com/jupyterhub/systemdspawner#local-users) and [c.SystemdSpawner.dynamic_users = True](https://github.com/jupyterhub/systemdspawner#dynamic_users)
+
+### Settings
+
+Linux administrators may want to review `/opt/iiab/jupyterhub/etc/jupyterhub/jupyterhub_config.py` which originates from:
+
+https://github.com/iiab/iiab/blob/master/roles/jupyterhub/templates/jupyterhub_config.py.j2
+
+In some rare circumstances, it may be necessary to restart JupyterHub's systemd service:
+
+```
+sudo systemctl restart jupyterhub
+```
+
+FYI `/opt/iiab/jupyterhub` is a Python 3 virtual environment, that can be activated (and deactivated) with the usual:
+
+```
+source /opt/iiab/jupyterhub/bin/activate
+(jupyterhub) root@box:~# deactivate
+```
+
+Passwords are hashed using 4096 rounds of the latest Blowfish (bcrypt's $2b$ algorithm) and stored in:
+
+```
+/opt/iiab/jupyterhub/etc/passwords.dbm    # Or passwords.dbm.db in the past.
+```
+
+### Users can change their own password
+
+Users can change their password by logging in, and then visiting URL: http://box.lan/jupyterhub/auth/change-password
+
+NOTE: This is the only way to change the password for user `Admin`, because **File > Hub Control Panel > Admin** (below) does not permit deletion of this account.
+
+### File > Hub Control Panel > Admin, to manage accounts
+
+The `Admin` user (and any users given `Admin` privilege) can reset user passwords by deleting the user from JupyterHub's **Admin** page (below).  This logs the user out, but does not remove any of their data or home directories.  The user can then set a new password in the usual way — simply by logging in.  Example:
+
+1. As a user with `Admin` privilege, click **File > Hub Control Panel** in your JupyterHub:
+
+   ![image](https://user-images.githubusercontent.com/2458907/217602766-ab6a9d3c-9f92-496e-a0e8-6c18a084e960.png)
+
+2. At the top of the Control Panel, click **Admin**:
+
+   ![image](https://user-images.githubusercontent.com/2458907/217602473-f4f9fd40-b4c1-45e1-88c5-54c6d4b604ff.png)
+
+   This opens up the JupyterHub Admin page, where you can add / delete users, start / stop peoples’ servers and see who is online.
+
+3. Delete the user whose password needs resetting.  Remember this does not delete their data or home directory:
+
+   ![Delete user button for each user](delete-user.png)
+
+   If there is a confirmation dialog, confirm the deletion.  This will also log the user out, if they were currently running.
+
+4. Re-create the user whose password needs resetting, on this same screen.
+
+5. Ask the user to log in, but with a new password of their choosing.  This will be their password going forward.
+
+_WARNING: If on login users see "500 : Internal Server Error", you may need to remove ALL files of the form_ `/run/jupyter-johndoe-singleuser`
+
+### Logging
+
+To see JupyterHub's (typically very long!) log, run:
+
+```
+journalctl -u jupyterhub
+```
+
+Sometimes other logs might also be available, e.g.:
+
+```
+journalctl -u jupyter-admin-singleuser
+```
+
+### PAWS/Jupyter Notebooks for Python Beginners
+
+While PAWS is a little bit off topic, if you have an interest in Wikipedia, please do see this 23m 42s video ["Intro to PAWS/Jupyter notebooks for Python beginners"](https://www.youtube.com/watch?v=AUZkioRI-aA&list=PLeoTcBlDanyNQXBqI1rVXUqUTSSiuSIXN&index=8) by Chico Venancio, from 2021-06-01.
+
+He explains PAWS as a "powerful Python execution environment https://paws.wmcloud.org = https://wikitech.wikimedia.org/wiki/PAWS [allowing] ordinary folks to write interactive scripts to work with Wikimedia content."

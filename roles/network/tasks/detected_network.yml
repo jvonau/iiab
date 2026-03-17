@@ -1,3 +1,15 @@
+# Similar code block in roles/vnstat/tasks/install.yml
+- name: Do we have a gateway? If 'ip route' specifies a default route, Ansible parses details here...
+  debug:
+    var: ansible_facts.default_ipv4
+
+- name: "If above ansible_facts.default_ipv4.gateway is defined, set WAN candidate 'discovered_wan_iface: {{ ansible_facts.default_ipv4.alias }}' -- using ansible_facts.default_ipv4.alias"
+  set_fact:
+    discovered_wan_iface: "{{ ansible_facts.default_ipv4.alias }}"
+  when:
+    - ansible_facts.default_ipv4.gateway is defined
+    - not is_proot
+
 # so this works
 - name: Interface count
   shell: ls /sys/class/net | grep -v {{ virtual_network_devices }} | wc | awk '{print $1}'
@@ -7,11 +19,13 @@
 - name: We're hosed no work interfaces
   fail:    # FORCE IT RED THIS ONCE!
     msg: "No_network_found"
-  when: adapter_count.stdout|int == 0
+  when:
+    - adapter_count.stdout | int == 0
+    - not is_proot
 
 - name: Checking for old device gateway interface for device test
   shell: grep IIAB_WAN_DEVICE {{ iiab_env_file }} | awk -F "=" '{print $2}'
-  when: iiab_stage|int == 9
+  when: iiab_stage | int == 9
   register: prior_gw
 
 - name: Setting device_gw, prior_gw_device
@@ -24,42 +38,50 @@
   set_fact:
     iiab_wan_iface: "{{ discovered_wan_iface }}"
     device_gw: "{{ discovered_wan_iface }}"
-  when: ansible_default_ipv4.gateway is defined
+  when: ansible_facts.default_ipv4.gateway is defined
 
-- name: Figure out netplan file name
-  shell: ls /etc/netplan
+# 2022-07-22: Moved to netplan.yml AND restart.yml (REMOVE DUPLICATE CODE LATER?!)
+# - name: Figure out netplan file name
+#   shell: ls /etc/netplan
+#   register: netplan
+#   ignore_errors: True # pre 17.10 doesn't use netplan
+#   when: is_ubuntu
+
+- name: Check if /etc/netplan exists
+  stat:
+    path: /etc/netplan
   register: netplan
-  ignore_errors: True # pre 17.10 doesn't use netplan
-  when: is_ubuntu
+
+- name: Setting netplan results
+  set_fact:
+    has_netplan: True
+  when: netplan.stat.exists and netplan.stat.isdir
 
 - name: Setting dhcpcd_test results
   set_fact:
-    dhcpcd_result: "{{ ansible_local.local_facts.dhcpcd }}"
+    dhcpcd_result: "{{ ansible_facts.ansible_local.local_facts.dhcpcd }}"
 
-- name: Setting systemd_networkd results
+# 2022-07-22: Copied to netplan.yml (REMOVE DUPLICATE CODE LATER?!)
+- name: "Set 'systemd_networkd_active: True' if local_facts.systemd_networkd confirms"
   set_fact:
     systemd_networkd_active: True
-  when: 'ansible_local.local_facts.systemd_networkd == "enabled"'
-
-- name: Setting systemd_networkd-2 results
-  set_fact:
-    systemd_networkd_active: True
-  when: 'ansible_local.local_facts.systemd_networkd == "enabled-runtime"'
+  when: ansible_facts.ansible_local.local_facts.systemd_networkd == "enabled" or ansible_facts.ansible_local.local_facts.systemd_networkd == "enabled-runtime"
 
 - name: Setting network_manager results
   set_fact:
     network_manager_active: True
-  when: 'ansible_local.local_facts.network_manager == "enabled"'
+  when: ansible_facts.ansible_local.local_facts.network_manager == "enabled"
 
 - name: Check /etc/network/interfaces for gateway
   shell: grep {{ device_gw }} /etc/network/interfaces | wc -l
-  when: is_debuntu
+  #when: is_debuntu
   register: wan_file
 
 - name: Setting wan_in_interfaces
   set_fact:
     wan_in_interfaces: True
-  when: is_debuntu and (wan_file.stdout|int > 0)
+  when: wan_file.stdout | int > 0
+  #when: is_debuntu and (wan_file.stdout | int > 0)
 
 # WIRELESS -- if any wireless is detected as gateway, it becomes WAN
 - name: Look for any wireless interfaces
@@ -70,9 +92,9 @@
 
 - name: Set the discovered wireless, if found
   set_fact:
-    wifi1: "{{ item|trim }}"
-    discovered_wireless_iface: "{{ item|trim }}"
-  when: item|trim != "" and item|trim != discovered_wan_iface
+    wifi1: "{{ item | trim }}"
+    discovered_wireless_iface: "{{ item | trim }}"
+  when: item | trim != "" and item | trim != discovered_wan_iface
   with_items:
     - "{{ wireless_list1.stdout_lines }}"
 
@@ -86,12 +108,12 @@
 # Last device is used
 - name: Set the discovered wireless, if found (take 2)
   set_fact:
-    wifi2: "{{ item|trim }}"
-    discovered_wireless_iface: "{{ item|trim }}"
-  when: wireless_list2.stdout is defined and item|trim != "ap0"
+    wifi2: "{{ item | trim }}"
+    discovered_wireless_iface: "{{ item | trim }}"
+  when: wireless_list2.stdout is defined and item | trim != "ap0"
   with_items:
     - "{{ wireless_list2.stdout_lines }}"
-#item|trim != discovered_wan_iface
+#item | trim != discovered_wan_iface
 
 - name: Count WiFi ifaces
   shell: "ls -la /sys/class/net/*/phy80211 | awk -F / '{print $5}' | grep -v -e ap0 | wc -l"
@@ -99,22 +121,46 @@
 
 - name: Remember number of WiFi devices
   set_fact:
-    num_wifi_interfaces: "{{ count_wifi_interfaces.stdout|int }}"
+    num_wifi_interfaces: "{{ count_wifi_interfaces.stdout | int }}"
+
+- block:
+    - name: Run 'iw list' to check for Access Point capability -- if discovered_wireless_iface ({{ discovered_wireless_iface }}) != "none"
+      # shell: iw list | grep -v AP: | grep AP | wc -l    # False positives 'EAP' etc
+      shell: iw list | grep '^[[:space:]]*\* AP$'    # If grep doesn't find the regex, it returns 1 (hence 'ignore_errors: yes' 9 lines below)
+      register: look_for_ap
+      when: discovered_wireless_iface != "none"    # Line not nec (but can't hurt?)
+      # failed_when: False    # Hides red errors and is too strong (renders useless the look_for_ap.failed test below!)
+
+  rescue:    # Force another red error msg (to explain) then proceed
+    - name: WiFi chipset/firmware NOT CAPABLE of AP Mode (details above)
+      fail:
+        msg: WiFi chipset/firmware NOT CAPABLE of AP Mode (details above)
+      ignore_errors: yes
+
+- name: "Set 'can_be_ap: True' if 'iw list' output contains suitable '* AP'"
+  set_fact:
+    can_be_ap: True
+  when: look_for_ap.failed is defined and not look_for_ap.failed
 
 - name: Detect wifi gateway active
   shell: ip r | grep default | grep {{ discovered_wireless_iface }} | wc -l
   register: wifi_gateway_found
   when: discovered_wireless_iface != "none"
 
-- name: Set has_wifi_gateway if WiFi has default gateway detected for {{ discovered_wireless_iface }}
+- name: "Set 'has_wifi_gateway: True' if WiFi has default gateway detected for discovered_wireless_iface ({{ discovered_wireless_iface }}) -- otherwise leave it undefined"
   set_fact:
     has_wifi_gateway: True
-  when: discovered_wireless_iface != "none" and (wifi_gateway_found.stdout|int > 0)
+  when: discovered_wireless_iface != "none" and (wifi_gateway_found.stdout | int > 0)
 
 - name: Detect secondary gateway active on all interfaces
   shell: ip r | grep default | grep -v {{ discovered_wan_iface }} | awk '{print $5}'
   register: second_gateway_found
   changed_when: False
+
+- name: If multiple secondary gateways are detected, fail intentionally and explain
+  fail:
+    msg: "IIAB currently DOES NOT SUPPORT multiple secondary gateways: {{ second_gateway_found.stdout }}"
+  when: second_gateway_found.stdout_lines is defined and second_gateway_found.stdout_lines | length > 1
 
 - name: Set exclude_devices if default gateway has been detected for {{ second_gateway_found.stdout }}
   set_fact:
@@ -135,17 +181,17 @@
   when: reserved_device is defined
 
 - name: Count LAN ifaces
-  shell: ls /sys/class/net | grep -v {{ virtual_network_devices }} -e wwlan -e ppp -e {{ device_gw }} -e {{ exclude_devices }} | wc -l
+  shell: ls /sys/class/net | grep -v {{ virtual_network_devices }} -e {{ discovered_wireless_iface }} -e {{ device_gw }} -e {{ exclude_devices }} | wc -l
   register: num_lan_interfaces_result
 
 - name: Calculate number of LAN interfaces including WiFi
   set_fact:
-    num_lan_interfaces: "{{ num_lan_interfaces_result.stdout|int }}"
+    num_lan_interfaces: "{{ num_lan_interfaces_result.stdout | int }}"
 
 # LAN - pick non WAN's
 - name: Create list of LAN (non WAN) ifaces
-  shell: ls /sys/class/net | grep -v {{ virtual_network_devices }} -e wwlan -e ppp -e {{ device_gw }} -e {{ exclude_devices }}
-  when: num_lan_interfaces != "0"
+  shell: ls /sys/class/net | grep -v {{ virtual_network_devices }} -e {{ discovered_wireless_iface }} -e {{ device_gw }} -e {{ exclude_devices }}
+  when: num_lan_interfaces != 0    # Var type 'integer' starting w/ ansible-core 2.19 -- previously var type had been 'AnsibleUnsafeText'
   register: lan_list_result
 
 # If 2 interfaces found in gateway mode, with one wifi, declare other to be wan
@@ -158,14 +204,21 @@
 
 # Select an adapter that is not WAN and not wireless
 # if there is more than one the last one wins
+- name: Fake out detection if rpi_image is defined
+  set_fact:
+    discovered_wireless_iface: wlan0
+    hostapd_enabled: True
+    can_be_ap: True
+  when: rpi_image is defined
+
 - name: Set discovered_wired_iface if present
   set_fact:
-    discovered_wired_iface: "{{ item|trim }}"
-  when: lan_list_result.stdout_lines is defined and item|trim != discovered_wireless_iface
+    discovered_wired_iface: "{{ item | trim }}"
+  when: lan_list_result.stdout_lines is defined and item | trim != discovered_wireless_iface
   with_items:
     - "{{ lan_list_result.stdout_lines }}"
 
-- name: Set iiab_wireless_lan_iface to {{ discovered_wireless_iface }} if not none
+- name: Set iiab_wireless_lan_iface to discovered_wireless_iface ({{ discovered_wireless_iface }}) if not none
   set_fact:
     iiab_wireless_lan_iface: "{{ discovered_wireless_iface }}"
   when: discovered_wireless_iface != "none" and not wifi_up_down
@@ -184,12 +237,13 @@
 - name: 2 or more devices on the LAN - use bridging
   set_fact:
     iiab_lan_iface: br0
-  when: num_lan_interfaces|int >= 2
+  when: num_lan_interfaces | int >= 2
 
 - name: For Debian, always use bridging
   set_fact:
     iiab_lan_iface: br0
-  when: num_lan_interfaces|int >= 1 and is_debuntu
+  when: num_lan_interfaces | int >= 1
+  #when: num_lan_interfaces | int >= 1 and is_debuntu
 
 - name: WiFi is on the LAN - use bridging
   set_fact:
@@ -205,6 +259,42 @@
   set_fact:
     iiab_lan_iface: "{{ iiab_wireless_lan_iface }}"
   when: iiab_wireless_lan_iface is defined and nobridge is defined
+
+- name: Detect WiFi country code in use
+  shell: iw reg get | grep country | grep -v UNSET | awk '{print $2}' | sed "s|:||"
+  register: REG_DOM
+  ignore_errors: True
+
+- name: Set host_country_code_found
+  set_fact:
+    host_country_code_found: "{{ REG_DOM.stdout }}"
+  when: REG_DOM.stdout is defined and REG_DOM.stdout | length > 0
+
+# 2025-09-01 becomes informational, host_country_code becomes the fallback for hostapd if not set by cmdline.txt or NetworkManager
+#- name: Set Wifi Region country to {{ REG_DOM.stdout }} for hostapd when present
+#  set_fact:
+#    host_country_code: "{{ REG_DOM.stdout }}"
+#  when: REG_DOM.stdout is defined and REG_DOM.stdout | length > 0 and wifi_up_down and can_be_ap and has_wifi_gateway is defined
+
+- name: Detect current Wifi channel
+  shell: iw {{ discovered_wireless_iface }} info | grep channel | cut -d' ' -f2
+  register: current_client_channel
+  when: wifi_up_down and can_be_ap and has_wifi_gateway is defined
+
+- name: Forcing wifi_up_down to False based on firmware selection "24"
+  set_fact:
+    wifi_up_down: False
+  when: rpi3bplus_rpi4_wifi_firmware == "24"
+
+- name: Detect "Firmware rejected country setting" in dmesg (invert return code, for intentional red error)
+  shell: '! dmesg | grep ieee80211 | grep "Firmware rejected country setting"'
+  register: FW_rejected_country
+  ignore_errors: True
+
+- name: Detect country code passed from cmdline in dmesg
+  shell: dmesg | grep -om1 'cfg80211\.ieee80211_regdom=\S*' | cut -d= -f2
+  register: cmdline_country_code
+  ignore_errors: True
 
 - name: In VM disable LAN - needs local_vars entry to activate
   set_fact:
@@ -228,42 +318,76 @@
     option: "{{ item.option }}"
     value: "{{ item.value | string }}"
   with_items:
-  - option: has_ifcfg_gw
-    value: "{{ has_ifcfg_gw }}"
-  - option: prior_gateway_device
-    value: "{{ prior_gw_device }}"
-  - option: dhcpcd_result
-    value: "{{ dhcpcd_result }}"
-  - option: network_manager_active
-    value: "{{ network_manager_active }}"
-  - option: systemd_networkd_active
-    value: "{{ systemd_networkd_active }}"
-  - option: wan_in_interfaces
-    value: "{{ wan_in_interfaces }}"
-  - option: wireless_list_1(wifi1)
-    value: "{{ wifi1 }}"
-  - option: wireless_list_2(wifi2)
-    value: "{{ wifi2 }}"
-  - option: num_wifi_interfaces
-    value: "{{ num_wifi_interfaces }}"
-  - option: discovered_wireless_iface
-    value: "{{ discovered_wireless_iface }}"
-  - option: discovered_wired_iface
-    value: "{{ discovered_wired_iface }}"
-  - option: 'exclude_devices'
-    value: "{{ exclude_devices }}"
-  - option: num_lan_interfaces
-    value: "{{ num_lan_interfaces }}"
-  - option: gui_static_wan
-    value: "{{ gui_static_wan }}"
-  - option: iiab_lan_iface
-    value: "{{ iiab_lan_iface }}"
-  - option: iiab_wan_iface
-    value: "{{ iiab_wan_iface }}"
+    - option: has_ifcfg_gw
+      value: "{{ has_ifcfg_gw }}"
+    - option: prior_gateway_device
+      value: "{{ prior_gw_device }}"
+    - option: has_netplan
+      value: "{{ has_netplan }}"
+    - option: dhcpcd_result
+      value: "{{ dhcpcd_result }}"
+    - option: network_manager_active
+      value: "{{ network_manager_active }}"
+    - option: systemd_networkd_active
+      value: "{{ systemd_networkd_active }}"
+    - option: wan_in_interfaces
+      value: "{{ wan_in_interfaces }}"
+    - option: wireless_list_1(wifi1)
+      value: "{{ wifi1 }}"
+    - option: wireless_list_2(wifi2)
+      value: "{{ wifi2 }}"
+    - option: num_wifi_interfaces
+      value: "{{ num_wifi_interfaces }}"
+    - option: discovered_wireless_iface
+      value: "{{ discovered_wireless_iface }}"
+    - option: discovered_wired_iface
+      value: "{{ discovered_wired_iface }}"
+    - option: 'exclude_devices'
+      value: "{{ exclude_devices }}"
+    - option: num_lan_interfaces
+      value: "{{ num_lan_interfaces }}"
+    - option: gui_static_wan
+      value: "{{ gui_static_wan }}"
+    - option: iiab_lan_iface
+      value: "{{ iiab_lan_iface }}"
+    - option: iiab_wan_iface
+      value: "{{ iiab_wan_iface }}"
+    - option: can_be_ap
+      value: "{{ can_be_ap }}"
+    - option: host_country_code_found
+      value: "{{ host_country_code_found }}"
+    - option: wifi_firmware_43430
+      value: "{{ rpizerow_rpi3_wifi_firmware }}"
+    - option: wifi_firmware_43455
+      value: "{{ rpi3bplus_rpi4_wifi_firmware }}"
+
+- name: Add 'detected_network' variable value 'current_client_channel.stdout' if defined and non-empty, to {{ iiab_ini_file }}
+  ini_file:
+    dest: "{{ iiab_ini_file }}"
+    section: detected_network
+    option: client_wifi_channel_found
+    value: "{{ current_client_channel.stdout }}"
+  when: current_client_channel.stdout is defined and current_client_channel.stdout != ""
+
+- name: Add 'detected_network' variable 'FW_rejected_country' stdout value ({{ FW_rejected_country.stdout }}) if defined and non-empty, to {{ iiab_ini_file }}
+  ini_file:
+    dest: "{{ iiab_ini_file }}"
+    section: detected_network
+    option: FW_rejected_country
+    value: "{{ FW_rejected_country.stdout }}"
+  when: FW_rejected_country.stdout is defined and FW_rejected_country.stdout != ""
+
+- name: Add 'detected_network' variable 'cmdline_country_code' stdout value ({{ cmdline_country_code.stdout }}) if defined and non-empty, to {{ iiab_ini_file }}
+  ini_file:
+    dest: "{{ iiab_ini_file }}"
+    section: detected_network
+    option: cmdline_country_code
+    value: "{{ cmdline_country_code.stdout }}"
+  when: cmdline_country_code.stdout is defined and cmdline_country_code.stdout != ""
 
 # well if there ever was a point to tell the user things are FUBAR this is it.
 # limit 2 network adapters wifi wired
 - name: I'm not guessing declare gateway please
   fail:    # FORCE IT RED THIS ONCE!
     msg: "Undetectable gateway or prior gateway for use with static network addressing from admin-console use local_vars to declare user_wan_iface"
-  when: adapter_count.stdout|int >=3 and gui_wan_iface == "unset" and gui_static_wan
+  when: adapter_count.stdout | int >=3 and gui_wan_iface == "unset" and gui_static_wan

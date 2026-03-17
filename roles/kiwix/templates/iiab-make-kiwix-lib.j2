@@ -1,0 +1,58 @@
+#!/bin/bash
+
+KIWIXLIB="{{ kiwix_library_xml }}"
+TMP="${KIWIXLIB}.tmp"
+
+LOCK_PATH="/run/lock/kiwix"
+LOCK_DIR="${LOCK_PATH}/make-kiwix-lib.lockdir"
+mkdir -p "$LOCK_PATH"
+
+kiwix_stop() {
+    if command -v pdsm >/dev/null 2>&1; then
+        pdsm stop kiwix
+    else
+        systemctl stop kiwix-serve
+    fi
+}
+kiwix_start() {
+    if command -v pdsm >/dev/null 2>&1; then
+        pdsm restart kiwix
+    else
+        systemctl start kiwix-serve
+    fi
+}
+
+# Acquire lockdir (wait up to 5 min; auto-clear if stale >10 min)
+start_ts=$(date +%s)
+while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+  now=$(date +%s)
+  lock_mtime=$(stat -c %Y "$LOCK_DIR" 2>/dev/null || echo "$now")
+  if (( now - lock_mtime > 600 )); then
+    rm -rf "$LOCK_DIR" 2>/dev/null || true
+    continue
+  fi
+  if (( now - start_ts > 300 )); then
+    echo "Timeout waiting for lock: $LOCK_DIR" >&2
+    exit 1
+  fi
+  sleep 2
+done
+trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
+
+echo "Now running iiab-make-kiwix-lib.py"
+if [ -f "$KIWIXLIB" ]; then
+  /usr/bin/iiab-make-kiwix-lib.py "$@"
+else
+  /usr/bin/iiab-make-kiwix-lib.py -f
+fi
+
+# Promote tmp -> final (Kiwix reads library.xml, not library.xml.tmp)
+if [ -s "$TMP" ]; then
+  kiwix_stop
+  mv -f "$TMP" "$KIWIXLIB"
+  kiwix_start
+else
+  echo "WARNING: expected tmp not found or empty: $TMP" >&2
+fi
+echo "Finished making Kiwix library.xml"
+exit 0

@@ -1,14 +1,20 @@
 ## Objective
 
-To streamline troubleshooting of remote Internet-in-a-Box (IIAB) installations, we bundle up common machine/software diagnostics, all together in 1 human-readable small file, that can be easily circulated online AND offline.
+To streamline troubleshooting of remote Internet-in-a-Box (IIAB) installations, we bundle up common machine/software diagnostics, all together in 1 human-readable file of about 2000 lines, that can be easily circulated online AND offline.
 
-Passwords (including Wi-Fi passwords) are auto-redacted from this file, to protect your community confidentiality.
+Just FYI Raspberry Pi OS's [/usr/bin/raspinfo](https://github.com/raspberrypi/utils/blob/master/raspinfo/raspinfo) serves a very similar purpose, but we do not include that program's 700-to-800 line output at present.
 
-The ``pastebinit`` command can then be used to auto-upload this file, creating a short URL that makes it much easier to circulate among [volunteers](http://internet-in-a-box.org/pages/contributing.html).
+For a more concise "instant" summary of any IIAB machine (about 20-25 lines) try this command instead: [/usr/bin/iiab-summary](iiab-summary)
+
+## What `iiab-diagnostics` does
+
+Passwords (including Wi-Fi passwords) are auto-redacted as the output file is generated, to protect your community confidentiality.
+
+Finally, the ``pastebinit`` command can be used to auto-upload the output file (human-readable, approx 2000 lines) creating a short URL that makes it much easier to circulate among [volunteers](https://internet-in-a-box.org/contributing.html).
 
 But first off, the file is compiled by harvesting 1 + 6 kinds of things:
 
-0. Filename Header + Git Hashes + Raspberry Pi Model + OS
+0. Filename Header + Git Hashes + Raspberry Pi Model + OS + CPU Architecture(s)
 
 1. Files specially requested (if you run ``sudo iiab-diagnostics PATH/FILE1 PATH/FILE2``)
 
@@ -49,7 +55,7 @@ But first off, the file is compiled by harvesting 1 + 6 kinds of things:
    Or, you can later/manually upload it using the ``pastebinit`` command:
 
    ```
-   pastebinit -b sprunge.us < /etc/iiab/diag/NEW-FILE-NAME
+   pastebinit -b paste.centos.org /etc/iiab/diag/NEW-FILE-NAME
    ```
 
    Either way, this will generate an actual web link (URL).
@@ -58,8 +64,6 @@ But first off, the file is compiled by harvesting 1 + 6 kinds of things:
 
    Include a description of the symptoms, and how to reproduce the problem.
 
-4. If you don't understand Step 3, email everything to bugs@iiab.io instead.
-
 ## Source Code
 
-Please look over the bottom of [iiab-diagnostics](iiab-diagnostics) (lines 106-222 especially) to learn more about which common IIAB files and commands make this rapid troubleshooting possible.
+Please look over the bottom of [iiab-diagnostics](iiab-diagnostics) (lines 137-283 especially) to learn more about which common IIAB files and commands make this rapid troubleshooting possible.

@@ -1,10 +1,15 @@
+- name: Record (initial) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df1
+
+
 - name: Install iiab lib files
   template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   with_items:
     - { src: 'iiab_const.py.j2', dest: '{{ py3_dist_path }}/iiab/iiab_const.py' }
     - { src: 'iiab_lib.py', dest: '{{ py3_dist_path }}/iiab/iiab_lib.py' }
@@ -12,6 +17,17 @@
 
 
 # RECORD pylibs AS INSTALLED
+
+- name: Record (final) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df2
+
+- name: Add 'pylibs_disk_usage = {{ df2.stdout | int - df1.stdout | int }}' to {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
+    section: pylibs
+    option: pylibs_disk_usage
+    value: "{{ df2.stdout | int - df1.stdout | int }}"
 
 - name: "Set 'pylibs_installed: True'"
   set_fact:

@@ -1,165 +1,171 @@
 # Initialize
+
 - name: ...IS BEGINNING ============================================
   stat:
-    path: "{{ iiab_env_file }}"
-  register: NewInstall
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
+  register: iiab_ini_test
 
+# Higher-level purpose explained at the bottom of:
+# https://github.com/iiab/iiab/blob/master/vars/default_vars.yml
+- name: "Ansible just ran /etc/ansible/facts.d/local_facts.fact to set 15 vars -- here we extract 6 of those -- iiab_stage: {{  ansible_facts.ansible_local.local_facts.stage }}, rpi_model: {{ ansible_facts.ansible_local.local_facts.rpi_model }}, devicetree_model: {{ ansible_facts.ansible_local.local_facts.devicetree_model }}, os_ver: {{ ansible_facts.ansible_local.local_facts.os_ver }}, python_version: {{ ansible_facts.ansible_local.local_facts.python_version }}, php_version: {{ ansible_facts.ansible_local.local_facts.php_version }}"
+  set_fact:
+    iiab_stage: "{{ ansible_facts.ansible_local.local_facts.stage }}"
+    rpi_model: "{{ ansible_facts.ansible_local.local_facts.rpi_model }}"
+    devicetree_model: "{{ ansible_facts.ansible_local.local_facts.devicetree_model }}"
+    os_ver: "{{ ansible_facts.ansible_local.local_facts.os_ver }}"
+    python_version: "{{ ansible_facts.ansible_local.local_facts.python_version }}"
+    php_version: "{{ ansible_facts.ansible_local.local_facts.php_version }}"
+
+- name: "Set OS vars -- is_raspbian, is_debian, is_ubuntu, is_linuxmint, is_trisquel"
+  set_fact:
+    is_raspbian: "{{ 'raspbian' in os_ver }}"      # Subset of is_debian
+    is_debian: "{{ 'debian' in os_ver or 'raspbian' in os_ver }}"             # OPPOSITE of is_ubuntu
+    is_ubuntu: "{{ not 'debian' in os_ver and not 'raspbian' in os_ver }}"    # OPPOSITE of is_debian
+    is_linuxmint: "{{ 'linuxmint' in os_ver }}"    # Subset of is_ubuntu
+    is_trisquel: "{{ 'trisquel' in os_ver }}"      # Subset of is_ubuntu
+
+- name: Run command 'dpkg --print-architecture' to identify OS architecture (CPU arch as revealed by ansible_architecture ~= ansible_machine is NOT enough!)
+  command: dpkg --print-architecture
+  register: dpkg_arch
+
+- name: Fakeout detection for image building
+  set_fact:
+    rpi_model: "fake"
+  when: rpi_image is defined
+
+# Initialize /etc/iiab/iiab.ini writing the 'location' and 'version' sections
+# once and only once, to preserve the install date and git hash.
+- name: Create {{ iiab_ini_file }}, if it doesn't exist
+  include_tasks: create_iiab_ini.yml
+  when: not iiab_ini_test.stat.exists
+
+# 2021-07-30: The 'first_run' flag isn't much used anymore.  In theory it's
+# still used in 1-prep/tasks/hardware.yml for raspberry_pi.yml
+#
+# This needs to be reworked for 0-init speed, and overall understandability.
 - name: Set first_run flag
   set_fact:
     first_run: True
-  when: not NewInstall.stat.exists
+  when: not iiab_ini_test.stat.exists
 
-- name: Set top-level variables from local_facts for convenience
-  set_fact:
-    rpi_model: "{{ ansible_local.local_facts.rpi_model }}"
-    xo_model: "{{ ansible_local.local_facts.xo_model }}"
-    iiab_stage: "{{ ansible_local.local_facts.stage }}"
-
-# We need to inialize the ini file and only write the location and version
-# sections once and only once to preserve the install date and git hash.
-- name: Create IIAB tools and {{ iiab_ini_file }}, if first_run
-  include_tasks: first_run.yml
-  when: first_run
 
 # Copies the latest/known version of iiab-diagnostics into /usr/bin (so it can
 # be run even if local source tree /opt/iiab/iiab is deleted to conserve disk).
-- name: Copy /opt/iiab/iiab/scripts/iiab-diagnostics to /usr/bin/iiab-diagnostics
+- name: Copy iiab-update & iiab-summary & iiab-diagnostics & iiab-root-login from /opt/iiab/iiab/scripts/ to /usr/bin/
   copy:
-    src: "{{ iiab_dir }}/scripts/iiab-diagnostics"
+    src: "{{ iiab_dir }}/scripts/{{ item }}"
     dest: /usr/bin/
     mode: '0755'
+  with_items:
+    - iiab-update
+    - iiab-summary
+    - iiab-diagnostics
+    - iiab-root-login
 
-- name: Create globally-writable directory /etc/iiab/diag so non-root users can run iiab-diagnostics
+- name: Symlink /usr/bin/iiab-upgrade -> /usr/bin/iiab-update
   file:
-    state: directory
-    path: /etc/iiab/diag
-    mode: '0777'
+    src: /usr/bin/iiab-update
+    path: /usr/bin/iiab-upgrade
+    state: link
+    #force: yes
 
-# 2020-10-29: Appears no longer nec (see 3 above ansible_local.local_facts.*)
-#- name: Re-read local_facts.facts from /etc/ansible/facts.d
-#  setup:
-#    filter: ansible_local
 
 - name: Pre-check that IIAB's "XYZ_install" + "XYZ_enabled" vars (1) are defined, (2) are boolean-not-string variables, and (3) contain plausible values.  Also checks that "XYZ_install" is True when "XYZ_installed" is defined.
   include_tasks: validate_vars.yml
+  when: not (rpi_model | regex_search('\\bW\\b'))    # Ansible require double backslashes, e.g. with \b "word boundary" anchors: https://www.regular-expressions.info/wordboundaries.html https://stackoverflow.com/questions/56869119/ansible-regular-expression-to-match-a-string-and-extract-the-line/56869801#56869801
 
-# Discover: do we have a gateway?
-# If Ansible detects gateway, becomes WAN candidate.
-- name: "Do we have a gateway? If so set discovered_wan_iface: {{ ansible_default_ipv4.alias }}"
-  set_fact:
-    discovered_wan_iface: "{{ ansible_default_ipv4.alias }}"
-  when: ansible_default_ipv4.gateway is defined
+# 2022-12-30: Functionality moved to www_options/tasks/php-settings.yml
+# - name: "Time Zone / TZ: Set symlink /etc/localtime to UTC if it doesn't exist?"
+#   include_tasks: tz.yml
 
-- name: "Verify gateway active: ping -c4 {{ ansible_default_ipv4.gateway }}"
-  shell: ping -c4 "{{ ansible_default_ipv4.gateway }}" | grep icmp_seq=4 | wc -l
-  when: discovered_wan_iface != "none"
-  register: gw_active_test
-
-- name: If so, set gw_active, iiab_wan_iface to {{ discovered_wan_iface }}
-  set_fact:
-    iiab_wan_iface: "{{ discovered_wan_iface }}"
-    gw_active: True
-  when: discovered_wan_iface != "none" and gw_active_test.stdout == "1"
-
-- name: Test with {{ iiab_wan_iface }} for Internet access ({{ iiab_download_url }}/heart-beat.txt)
-  get_url:
-    url: "{{ iiab_download_url }}/heart-beat.txt"
-    dest: /tmp/heart-beat.txt
-    #timeout: "{{ download_timeout }}"
-    # @jvonau recommends: 100sec is too much (keep 10sec default)
-  ignore_errors: True
-  #async: 10
-  #poll: 2
-  register: internet_access_test
-
-- name: Set internet_available if download succeeded and not disregard_network
-  set_fact:
-    internet_available: True
-  when: not internet_access_test.failed and not disregard_network
-
-- name: Remove downloaded Internet test file /tmp/heart-beat.txt
-  file:
-    path: /tmp/heart-beat.txt
-    state: absent
-
-# Put all computed vars here so derive properly from any prior var file.
-- name: If the TZ is not set in env, set it to UTC
-  include_tasks: tz.yml
-
-- name: Set port 80 for Admin Console if not adm_cons_force_ssl
-  set_fact:
-    gui_port: 80
-  when: not adm_cons_force_ssl
-
-- name: Set port 443 for Admin Console if adm_cons_force_ssl
-  set_fact:
-    gui_port: 443
-  when: adm_cons_force_ssl
-
-- name: "Set iiab_fqdn: {{ iiab_hostname }}.{{ iiab_domain }}"
-  set_fact:
-    iiab_fqdn: "{{ iiab_hostname }}.{{ iiab_domain }}"
-    FQDN_changed: False
-
-- name: Set FQDN_changed when iiab_fqdn != ansible_fqdn ({{ ansible_fqdn }})
-  set_fact:
-    FQDN_changed: True
-  when: iiab_fqdn != ansible_fqdn
-
-- name: Set hostname if FQDN_changed
+- name: Set hostname / domain (etc) in various places
   include_tasks: hostname.yml
-  when: FQDN_changed
 
 - name: Add 'runtime' variable values to {{ iiab_ini_file }}
   ini_file:
-    dest: "{{ iiab_ini_file }}"
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
     section: runtime
     option: "{{ item.option }}"
     value: "{{ item.value | string }}"
   with_items:
+    - option: ansible_version
+      value: "{{ ansible_facts.ansible_local.local_facts.ansible_version }}"
     - option: iiab_stage
       value: "{{ iiab_stage }}"
     - option: iiab_base_ver
       value: "{{ iiab_base_ver }}"
     - option: iiab_revision
       value: "{{ iiab_revision }}"
+    - option: iiab_remote_url
+      value: "{{ ansible_facts.ansible_local.local_facts.iiab_remote_url }}"
     - option: runtime_branch
-      value: "{{ ansible_local.local_facts.iiab_branch }}"
+      value: "{{ ansible_facts.ansible_local.local_facts.iiab_branch }}"
     - option: runtime_commit
-      value: "{{ ansible_local.local_facts.iiab_commit }}"
+      value: "{{ ansible_facts.ansible_local.local_facts.iiab_commit }}"
+    - option: iiab_recent_tag
+      value: "{{ ansible_facts.ansible_local.local_facts.iiab_recent_tag }}"
     - option: runtime_date
-      value: "{{ ansible_date_time.iso8601 }}"
-    - option: ansible_version
-      value: "{{ ansible_local.local_facts.ansible_version }}"
+      value: "{{ ansible_facts.date_time.iso8601 }}"
     - option: kernel
-      value: "{{ ansible_kernel }}"
-    - option: memory_mb
-      value: "{{ ansible_memtotal_mb }}"
-    - option: swap_mb
-      value: "{{ ansible_swaptotal_mb }}"
-    # 2021-01-28: Non-existent var, so fails with ansible-base 2.10.5 (#2669)
-    #- option: product_id
-    #  value: "{{ ansible_product_uuid }}"
-    - option: gw_active
-      value: "{{ gw_active }}"
-    - option: internet_available
-      value: "{{ internet_available }}"
+      value: "{{ ansible_facts.kernel }}"
     - option: rpi_model
       value: "{{ rpi_model }}"
+    - option: devicetree_model
+      value: "{{ devicetree_model }}"
+    - option: os_ver
+      value: "{{ os_ver }}"
+    - option: is_raspbian
+      value: "{{ is_raspbian }}"
+    - option: is_debian
+      value: "{{ is_debian }}"
+    - option: is_ubuntu
+      value: "{{ is_ubuntu }}"
+    - option: is_linuxmint
+      value: "{{ is_linuxmint }}"
+    - option: is_trisquel
+      value: "{{ is_trisquel }}"
+    - option: python_version
+      value: "{{ python_version }}"
+    - option: php_version
+      value: "{{ php_version }}"
     - option: first_run
       value: "{{ first_run }}"
-    - option: local_tz
-      value: "{{ local_tz }}"
-    - option: no_NM_reload
-      value: "{{ no_NM_reload }}"
-    - option: is_F18
-      value: "{{ is_F18 }}"
+    # - option: local_tz    # e.g. 'EDT' (summer) or 'EST' (winter) after Ansible interprets symlink /etc/localtime -- or 'UTC' if /etc/localtime doesn't exist
+    #   value: "{{ local_tz }}"
+    # - option: etc_localtime.stdout    # e.g. 'America/New_York' direct from symlink /etc/localtime -- or '' if /etc/localtime doesn't exist
+    #   value: "{{ etc_localtime.stdout }}"
     - option: FQDN_changed
       value: "{{ FQDN_changed }}"
 
+- name: Add 'runtime' default 'memory_mb' 'swap_mb' variable values to {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
+    section: runtime
+    option: "{{ item.option }}"
+    value: "{{ item.value | string }}"
+  with_items:
+    - option: memory_mb
+      value: "{{ ansible_facts.memtotal_mb }}"
+    - option: swap_mb
+      value: "{{ ansible_facts.swaptotal_mb }}"
+  when: not is_proot
+
+- name: Add 'runtime' proot 'memory_mb' 'swap_mb' variable values to {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
+    section: runtime
+    option: "{{ item.option }}"
+    value: "{{ item.value | string }}"
+  with_items:
+    - option: memory_mb
+      value: "{{ iiab_memtotal_mb }}"
+    - option: swap_mb
+      value: "{{ iiab_swaptotal_mb }}"
+  when: is_proot
+
 - name: Add 'runtime' variable 'is_VM' value if defined, to {{ iiab_ini_file }}
   ini_file:
-    dest: "{{ iiab_ini_file }}"
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
     section: runtime
     option: "{{ item.option }}"
     value: "{{ item.value | string }}"
@@ -169,4 +175,4 @@
   when: is_VM is defined
 
 - name: STAGE 0 HAS COMPLETED ======================================
-  command: echo    # "name: XYZ" fails to appear with "meta: noop"
+  meta: noop    # Or use "command: echo" to force instantiation of vars e.g. "name: {{ var }}"

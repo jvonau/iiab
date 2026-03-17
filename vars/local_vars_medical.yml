@@ -1,19 +1,21 @@
 # Default overrides
 kiwix_incl_apk: True
-kalite_install: False
-kalite_enabled: False
+kolibri_install: False
+kolibri_enabled: False
 captiveportal_install: True
 captiveportal_enabled: True
 mediawiki_install: True
 mediawiki_enabled: True
 osm_vector_maps_install: False
 osm_vector_maps_enabled: False
+maps_install: False
+maps_enabled: False
 munin_install: True
 munin_enabled: True
 vnstat_install: True
 vnstat_enabled: True
-openvpn_handle: "Medical IIAB - Put Your Name Here"
-usb_lib_umask0000_for_kolibri: False
+usb_lib_writable_sticks: False
+allow_www_data_poweroff: False
 # By default
 # kiwix
 # awstats

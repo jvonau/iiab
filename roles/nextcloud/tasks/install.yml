@@ -1,9 +1,29 @@
+- name: "Set 'mysql_install: True' and 'mysql_enabled: True'"
+  set_fact:
+    mysql_install: True
+    mysql_enabled: True
+
+- name: MYSQL - run 'mysql' role (attempt to install & enable MySQL / MariaDB)
+  include_role:
+    name: mysql
+
+- name: FAIL (STOP THE INSTALL) IF 'mysql_installed is undefined'
+  fail:
+    msg: "Nextcloud install cannot proceed, as MySQL / MariaDB is not installed."
+  when: mysql_installed is undefined
+
+
+- name: Record (initial) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df1
+
+
 # CHECK FOR PHP VERSION AUTOMATICALLY, TO DETERMINE WHICH NEXTCLOUD TO INSTALL.
 # INSPIRED BY: github.com/iiab/iiab/blob/master/roles/nodejs/tasks/main.yml
 
 # - name: Try to run 'php -v' to get PHP version
 #   # e.g. converts multi-line "PHP 7.0.33-0ubuntu0.16.04.5 (cli) ( NTS ) ..." to "7.0.33"
-#   shell: php -v | head -1 | sed 's/^[^0-9.]*//' | sed 's/[^0-9.].*//'
+#   shell: php -v | head -1 | sed 's/^[^0-9.]*//; s/[^0-9.].*//'
 #   register: php_version_installed
 #   #ignore_errors: yes    # NOT NEC: if php is not installed, php_version_installed.stdout will get set to ""
 
@@ -40,82 +60,113 @@
 #     var: php_new
 
 
-# https://docs.nextcloud.com/server/18/admin_manual/installation/source_installation.html#prerequisites-for-manual-installation
-# 2021-04-11: If you're running Nextcloud 21+ in production, carefully check the latest required AND recommended prereqs:
-# https://docs.nextcloud.com/server/21/admin_manual/installation/source_installation.html#prerequisites-for-manual-installation
-- name: Install ffmpeg + libxml2 + 13 php packages
+# February 2020: See @m-anish's PR #2119 and follow-up PR #2258.
+# December 2023: Check latest required AND recommended prereqs below!
+# e.g. Nextcloud 26 works with PHP 8.2; Nextcloud 27 deprecates PHP 8.0; Nextcloud 28 works with PHP 8.3
+# https://docs.nextcloud.com/server/latest/admin_manual/installation/system_requirements.html
+# https://docs.nextcloud.com/server/latest/admin_manual/installation/source_installation.html#prerequisites-for-manual-installation
+# https://docs.nextcloud.com/server/latest/admin_manual/installation/php_configuration.html
+# https://docs.nextcloud.com/server/28/admin_manual/installation/
+
+# 2023-12-15: Lifesaver manual upgrade instructions below!  As Nextcloud OFTEN
+# gets badly stuck (PHP timeouts, leading to FALSE instructions erroneously
+# asking you to wait) if its web-based upgrade process is attempted :/
+# https://docs.nextcloud.com/server/latest/admin_manual/maintenance/manual_upgrade.html
+
+- name: Install libxml2 if available -- THOUGH NEXTCLOUD MIGHT FAIL W/O THIS ? (e.g. on Ubuntu 25.10 as of 2025-09-16)
+  package:
+    name: libxml2    # php-libxml requires libxml2 >= 2.7.0
+  ignore_errors: yes
+
+- name: Install ffmpeg + 11 PHP packages (run 'php -m' or 'php -i' to verify)
   package:
     name:
       #- dnsutils    # NOT REQUESTED by Nextcloud
       - ffmpeg       # Optional (for preview generation)
-      - libxml2      # php-libxml requires libxml2 >= 2.7.0
+      #- libxml2     # php-libxml requires libxml2 >= 2.7.0
       #- libapache2-mod-php    # 2020-02-15: NO LONGER NEEDED?
-      - php{{ php_version }}-bcmath        # Highly recommended by Nextcloud 21 for "improved performance and better compatibility"
-      - php{{ php_version }}-bz2           # Optional (for extraction of apps)
-      - php{{ php_version }}-cli           # Likely optional?  @jvonau says this drags in php{{ php_version }}-common as @m-anish wanted in PR #2119 / #2258
-      - php{{ php_version }}-curl
-      - php{{ php_version }}-gd
-      - php{{ php_version }}-gmp           # Optional (for SFTP storage)
-      - php{{ php_version }}-imagick       # Optional (for preview generation)
-      - php{{ php_version }}-intl          # Optional (increases language translation performance and fixes sorting of non-ASCII characters)
-      - php{{ php_version }}-json
+      - php{{ php_version }}-bcmath        # Highly recommended by Nextcloud 21 for "improved performance and better compatibility" -- Likewise installed in pbx/tasks/freepbx_dependencies.yml, wordpress/tasks/install.yml
+      - php{{ php_version }}-bz2           # OPTIONAL (for extraction of apps)
+      #- php{{ php_version }}-common       # Auto-installed as an apt dependency.  REGARDLESS: php{{ php_version }}-common superset php{{ php_version }}-cli is auto-installed by php{{ php_version }}-fpm in nginx/tasks/install.yml
+      - php{{ php_version }}-curl          # Likewise installed in moodle/tasks/install.yml, pbx/tasks/freepbx_dependencies.yml, wordpress/tasks/install.yml
+      #- php{{ php_version }}-exif         # OPTIONAL (for image rotation in pictures app) but somehow already installed with PHP's core, as confirmed by 'php -m'
+      #- php{{ php_version }}-fileinfo     # OPTIONAL (enhances file analysis performance) but somehow already installed with PHP's core, as confirmed by 'php -m'
+      - php{{ php_version }}-gd            # Likewise installed in moodle/tasks/install.yml, pbx/tasks/freepbx_dependencies.yml
+      - php{{ php_version }}-gmp           # OPTIONAL (for SFTP storage)
+      - php-imagick                        # OPTIONAL (for preview generation).  BUT drags in Apache's libapache2-mod-phpX.Y etc, as confirmed by 'apt depends php-imagick' -- while php{{ php_version }}-imagick installs (despite not being shown within 'apt list "php*imagick"') it's no better -- and 'apt depends phpX.Y-imagick' mysteriously does NOT show its deps.  Likewise installed in wordpress/tasks/install.yml
+      - php{{ php_version }}-intl          # OPTIONAL (increases language translation performance and fixes sorting of non-ASCII characters): Likewise installed in mediawiki/tasks/install.yml, moodle/tasks/install.yml, wordpress/tasks/install.yml
+      #- php{{ php_version }}-json         # Included with PHP >= 8.0 -- see stanza just below
       #- php{{ php_version }}-libxml       # NOT INSTALLABLE: ENABLED BY DEFAULT (https://www.php.net/manual/en/libxml.installation.php)
-      - php{{ php_version }}-mbstring
-      - php{{ php_version }}-mysql
-      #- php{{ php_version }}-openssl      # NOT INSTALLABLE: ENABLED BY DEFAULT?
-      #- php{{ php_version }}-pdo_mysql    # NOT INSTALLABLE: php-mysql handles this on all OS's?
+      - php{{ php_version }}-mbstring      # Likewise installed in mediawiki/tasks/install.yml, moodle/tasks/install.yml, pbx/tasks/freepbx_dependencies.yml, wordpress/tasks/install.yml
+      - php{{ php_version }}-mysql         # Likewise installed in mysql/tasks/install.yml, pbx/tasks/freepbx_dependencies.yml, wordpress/tasks/install.yml
+      #- php{{ php_version }}-openssl      # Included with PHP >= 8.0 -- NOT INSTALLABLE
+      #- php{{ php_version }}-pdo_mysql    # NOT INSTALLABLE: php{{ php_version }}-mysql handles this on all OS's?
       #- php{{ php_version }}-redis        # @m-anish future work?
       #- php{{ php_version }}-session      # NOT INSTALLABLE: ENABLED BY DEFAULT?
       #- php{{ php_version }}-smbclient    # Optional (SMB/CIFS integration)
-      - php{{ php_version }}-xml           # NOT FORMALLY REQUESTED by Nextcloud (BUT hopefully delivers php-simplexml if not {php-xmlreader, php-xmlwriter} on Raspbian?)
-      - php{{ php_version }}-zip
+      - php{{ php_version }}-xml           # Likewise installed in mediawiki/tasks/install.yml, moodle/tasks/install.yml, pbx/tasks/freepbx_dependencies.yml, wordpress/tasks/install.yml -- AND REGARDLESS dragged in later by Admin Console's use of php-pear for roles/cmdsrv/tasks/main.yml -- Nextcloud's official requirements include {SimpleXML, XMLReader, XMLWriter} as confirmed by 'php -m | grep -i xml' which in the end shows {libxml, SimpleXML, xml, xmlreader, xmlwriter}
+      #- php{{ php_version }}-xmlrpc       # 2021-06-27: Experimentally remove, as explained in moodle/tasks/install.yml
+      - php{{ php_version }}-zip           # Likewise installed in moodle/tasks/install.yml, pbx/tasks/freepbx_dependencies.yml, wordpress/tasks/install.yml
       #- php{{ php_version }}-zlib         # NOT INSTALLABLE: ENABLED BY DEFAULT?
     state: present
 
-# https://docs.nextcloud.com/server/18/admin_manual/installation/source_installation.html#prerequisites-for-manual-installation
-#- name: Install 9 additional php packages, if OS is not Raspbian (these are not available on Raspbian on RPi, as of Feb 2020)
+# For PHP >= 8.0: phpX.Y-json is baked into PHP itself.
+# For PHP <  8.0: phpX.Y-json auto-installed by phpX.Y-fpm AND phpX.Y-cli in 3-base-server's nginx/tasks/install.yml, as confirmed by: apt rdepends phpX.Y-json
+#
+#- name: Install php{{ php_version }}-json if PHP < 8.0
 #  package:
-#    name:
-#      - php{{ php_version }}-ctype
-#      - php{{ php_version }}-dom
-#      - php{{ php_version }}-exif        # Optional (for image rotation in pictures app)
-#      - php{{ php_version }}-fileinfo    # Optional (enhances file analysis performance)
-#      - php{{ php_version }}-iconv
-#      - php{{ php_version }}-posix
-#      - php{{ php_version }}-simplexml
-#      - php{{ php_version }}-xmlreader
-#      - php{{ php_version }}-xmlwriter
+#    name: php{{ php_version }}-json
 #    state: present
-#  when: not is_raspbian
+#  when: php_version is version('8.0', '<')
+
+- name: "Run roles/www_options/tasks/php-settings.yml with 'nginx_high_php_limits: True' by default"
+  include_tasks: roles/www_options/tasks/php-settings.yml
+  when: php_settings_done is undefined
 
 
-- name: Create dir {{ nextcloud_root_dir }}
+- name: Create dir {{ nextcloud_root_dir }} (by default 755 dirs & 644 files)
   file:
     state: directory
     path: "{{ nextcloud_root_dir }}"    # /library/www/nextcloud
 
-- name: Unarchive {{ nextcloud_dl_url }} (100+ MB) to {{ nextcloud_root_dir }} (400+ MB, {{ apache_user }}:{{ apache_user }})
+# Nextcloud 25 EOL was 2023-10-01: https://endoflife.date/nextcloud
+# https://github.com/nextcloud/server/wiki/Maintenance-and-Release-Schedule#eol-versions
+#- name: "2023-03-24: NEXTCLOUD 26 REQUIRES PHP 8 -- SO THIS TEMPORARY PATCH INSTALLS THE OLDER NEXTCLOUD 25 ON OS's WITH PHP 7.x -- WHOSE END-OF-LIFE WAS NOVEMBER 2022"
+#  set_fact:
+#    nextcloud_dl_url: https://download.nextcloud.com/server/releases/latest-25.tar.bz2
+#  when: php_version is version('8.0', '<')
+
+- name: Download {{ nextcloud_dl_url }} (~261 MB) to {{ nextcloud_root_dir }} (~820 MB initially, sometimes ~875 MB later, {{ apache_user }}:{{ apache_user }})
+  get_curl:
+    url: "{{ nextcloud_dl_url }}"
+    dest: "{{ downloads_dir }}/latest.tar.bz2"
+  register: nextcloud_dl
+
+- name: Unarchive {{ nextcloud_dl.dest }} (~261 MB) to {{ nextcloud_root_dir }} (~820 MB initially, sometimes ~875 MB later, {{ apache_user }}:{{ apache_user }})
   unarchive:
-    remote_src: yes    # Overwrite even if "already exists on the target"
-    src: "{{ nextcloud_dl_url }}"
+    src: "{{ nextcloud_dl.dest }}"
     #dest: "{{ nextcloud_base_dir }}"    # /library/www
     dest: "{{ nextcloud_root_dir }}"     # /library/www/nextcloud
     owner: "{{ apache_user }}"           # www-data on debuntu
     group: "{{ apache_user }}"
     extra_opts: --strip-components=1     # Or use 'dest: /library/www' above
-  when: internet_available
 
 - name: Provision Nextcloud's MySQL DB, run Nextcloud's install wizard, etc
   include_tasks: setup.yml
 
-- name: Install /etc/{{ apache_conf_dir }}/nextcloud.conf from template, for http://box{{ nextcloud_url }}    # http://box/nextcloud
-  template:
-    src: nextcloud.conf.j2
-    dest: "/etc/{{ apache_conf_dir }}/nextcloud.conf"    # apache2/sites-available on debuntu
-  when: apache_installed is defined
-
 
 # RECORD Nextcloud AS INSTALLED
+
+- name: Record (final) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df2
+
+- name: Add 'nextcloud_disk_usage = {{ df2.stdout | int - df1.stdout | int }}' to {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
+    section: nextcloud
+    option: nextcloud_disk_usage
+    value: "{{ df2.stdout | int - df1.stdout | int }}"
 
 - name: "Set 'nextcloud_installed: True'"
   set_fact:

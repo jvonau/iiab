@@ -1,3 +1,8 @@
+- name: Record (initial) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df1
+
+
 # 1. Prepare to install Gitea: create user and directory structure
 
 - name: Shut down existing Gitea instance (if we're reinstalling)
@@ -6,19 +11,19 @@
     state: stopped
   ignore_errors: yes
 
-- name: Ensure group gitea exists
+- name: Ensure group 'gitea' exists
   group:
     name: gitea
     state: present
 
-- name: Create user gitea
+- name: Create user 'gitea'
   user:
     name: gitea
     comment: Gitea daemon account
     groups: gitea
     home: "{{ gitea_home }}"    # /home/gitea
 
-- name: Create Gitea directory structure
+- name: Create {{ gitea_root_directory }} directory structures
   file:
     path: "{{ gitea_root_directory }}/{{ item }}"    # /library/gitea
     state: directory
@@ -26,7 +31,7 @@
     group: gitea
   with_items: "{{ gitea_subdirectories }}"
 
-- name: Make directories data, indexers, and log writable
+- name: Make directories data, indexers, and log writable (0750)
   file:
     path: "{{ gitea_root_directory }}/{{ item }}"    # /library/gitea
     mode: '0750'
@@ -40,33 +45,32 @@
 
 - name: Fail if we detect unknown architecture
   fail:
-    msg: "Could not find a binary for the CPU architecture \"{{ ansible_architecture }}\""
+    msg: "Could not find a binary for the CPU architecture \"{{ ansible_facts.architecture }}\""
   when: gitea_iset_suffix == "unknown"
 
-- name: Download Gitea binary {{ gitea_download_url }} to {{ gitea_install_path }}
+- name: Download Gitea binary {{ gitea_download_url }} to {{ gitea_install_path }} (0775, ~134 MB, SLOW DOWNLOAD CAN TAKE ~15 MIN)
   get_url:
     url: "{{ gitea_download_url }}"
-    dest: "{{ gitea_install_path }}"
-    mode: '0775'
+    dest: "{{ gitea_install_path }}"    # e.g. /library/gitea/bin/gitea-1.21
+    mode: "0775"
     timeout: "{{ download_timeout }}"
-  when: internet_available
 
-- name: Download Gitea GPG signature
-  get_url:
+- name: Download Gitea GPG signature {{ gitea_integrity_url }} to {{ gitea_checksum_path }}
+  get_curl:
     url: "{{ gitea_integrity_url }}"
     dest: "{{ gitea_checksum_path }}"
-  when: internet_available
+    timeout: "{{ download_timeout }}"
 
-- name: Verify Gitea binary with GPG signature
+- name: Verify Gitea binary with GPG signature ("BAD signature" FALSE ALARMS continue as of 2023-07-16, despite their claims at https://docs.gitea.com/installation/install-from-binary#verify-gpg-signature)
   shell: |
-    gpg --keyserver pgp.mit.edu --recv {{ gitea_gpg_key }}
+    gpg --keyserver keys.openpgp.org --recv {{ gitea_gpg_key }}
     gpg --verify {{ gitea_checksum_path }} {{ gitea_install_path }}
   ignore_errors: yes
 
 - name: Symlink {{ gitea_link_path }} -> {{ gitea_install_path }}
   file:
     src: "{{ gitea_install_path }}"
-    path: "{{ gitea_link_path }}"
+    path: "{{ gitea_link_path }}"    # /library/gitea/gitea
     owner: gitea
     group: gitea
     state: link
@@ -75,42 +79,47 @@
 # 3. Configure Gitea
 
 # For security reasons, the Gitea developers recommend removing group write
-# permissions from /etc/gitea/ and /etc/gitea/app.ini after the first run of 
-# Gitea. User gitea needs write permissions during the first run but not 
+# permissions from /etc/gitea/ and /etc/gitea/app.ini after the first run of
+# Gitea. User gitea needs write permissions during the first run but not
 # subsequent runs.
 
-- name: mkdir /etc/gitea
+- name: mkdir /etc/gitea (0770)
   file:
     state: directory
     path: /etc/gitea
     owner: root
     group: gitea
-    mode: '0770'
+    mode: "0770"
 
-- name: Install /etc/gitea/app.ini from template
+- name: Install /etc/gitea/app.ini from template (0664)
   template:
     src: app.ini.j2
     dest: /etc/gitea/app.ini
     owner: root
     group: gitea
-    mode: '0664'
+    mode: "0664"
 
 
-# 4. Create systemd service & prepare Apache for http://box/gitea
+# 4. Create systemd service & prepare NGINX for http://box/gitea
 
-- name: "Install from template: /etc/systemd/system/gitea.service"
+- name: "Install from template: /etc/systemd/system/gitea.service (by default 0644)"
   template:
     src: gitea.service.j2
     dest: /etc/systemd/system/gitea.service
 
-- name: "Install from template: /etc/{{ apache_conf_dir }}/gitea.conf"
-  template:
-    src: gitea.conf.j2
-    dest: "/etc/{{ apache_conf_dir }}/gitea.conf"    # apache2/sites-available
-  when: apache_installed is defined
-
 
 # 5. RECORD Gitea AS INSTALLED
+
+- name: Record (final) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df2
+
+- name: Add 'gitea_disk_usage = {{ df2.stdout | int - df1.stdout | int }}' to {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
+    section: gitea
+    option: gitea_disk_usage
+    value: "{{ df2.stdout | int - df1.stdout | int }}"
 
 - name: "Set 'gitea_installed: True'"
   set_fact:

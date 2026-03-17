@@ -1,35 +1,49 @@
 server {
-      root {{ doc_root }};
-      server_name {{ iiab_hostname }};
-      listen 80;
- 
-      index  index.php index.html index.htm;
+    root {{ doc_root }};
+    server_name $hostname;    # e.g. box.lan, set dynamically when NGINX starts
+    #server_name {{ iiab_hostname }}.{{ iiab_domain }};
+    #server_name {{ iiab_hostname }};
+    listen {{ nginx_port }};
 
-      # let individual services drop location blocks in conf.d
-      include {{ nginx_conf_dir }}/*;
- 
-      location ~ .*\.php$ {
-          proxy_set_header X-Real-IP  $remote_addr;
-          proxy_set_header X-Forwarded-For $remote_addr;
-          proxy_set_header Host $host;
-          fastcgi_pass php;
-          fastcgi_index index.php;
-          fastcgi_split_path_info ^(.+\.php)(/.+)$;
-          fastcgi_param   SCRIPT_FILENAME    $document_root$fastcgi_script_name;
-          fastcgi_param   SCRIPT_NAME        $fastcgi_script_name;
-          include fastcgi_params;
-       }
- 
-      location /cgi-bin {
-         root /usr/lib;
-      }
+    index index.php index.html index.htm;
 
-       # if you don't like seeing all the errors for missing favicon.ico in root
-       location = /favicon.ico { access_log off; log_not_found off; }
- 
-       # if you don't like seeing errors for a missing robots.txt in root
-       location = /robots.txt { access_log off; log_not_found off; }
- 
-       # this will prevent files like .htaccess .htpassword .secret etc from being served
-       location ~ /\. { deny all; }
+    # NGINX's 1MB default is far too low for Calibre-Web and LMS-like apps.
+    # So IIAB sets this to 10000M, roughly aligning with similar settings...
+    # 1. 'upload_max_filesize = 10000M' and 'post_max_size = 10000M' are SOMETIMES set in:
+    #    https://github.com/iiab/iiab/blob/master/roles/www_options/tasks/php-settings.yml#L90-L91
+    #    https://github.com/iiab/iiab/blob/master/roles/www_options/tasks/php-settings.yml#L104-L105
+    # 2. 'client_max_body_size 10000M;' is set in:
+    #    https://github.com/iiab/iiab/blob/master/roles/nextcloud/templates/nextcloud-nginx.conf.j2#L62
+    client_max_body_size 10000M;
+
+    # let individual services drop location blocks in conf.d
+    include {{ nginx_conf_dir }}/*;
+
+    location ~ .*\.php$ {
+        proxy_set_header X-Real-IP  $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Host $host;
+        fastcgi_pass php;
+        fastcgi_index index.php;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param SCRIPT_NAME $fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    # 2021-07-30: Security risk identified by @tim-moody
+    #location /cgi-bin {
+    #    root /usr/lib;
+    #}
+
+    # if you don't like seeing all the errors for missing favicon.ico in root
+    location = /favicon.ico { access_log off; log_not_found off; }
+
+    # if you don't like seeing errors for a missing robots.txt in root
+    location = /robots.txt { access_log off; log_not_found off; }
+
+    # Let's not serve files like .htaccess .htpassword .secret etc.
+    # EXCEPTION: 'location ^~ /kiwix' in /etc/nginx/conf.d/kiwix-nginx.conf
+    # overrules this, for ZIM file articles that begin with a dot (#3072).
+    location ~ /\. { deny all; }
 }

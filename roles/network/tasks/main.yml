@@ -1,7 +1,6 @@
-- name: Select RPi firmware mode
-  include_role:
-    name: firmware
-  when: rpi_model != "none"
+- name: Install network packages (including many WiFi tools, and also iptables-persistent for firewall)
+  include_tasks: install.yml
+  when: network_install and network_installed is undefined
 
 - name: detected_network
   include_tasks: detected_network.yml
@@ -21,59 +20,126 @@
 - name: computed_network
   include_tasks: computed_network.yml
 
-- name: Configure wondershaper
-  include_tasks: wondershaper.yml
-  when: wondershaper_install or wondershaper_installed is defined
+# 2022-07-22: @jvonau asks for this to be BELOW computed_network.yml (what goes
+# into iiab-hotspot-on|off depends on can_be_ap, wifi_up_down, etc).
+# REQUIREMENT: Admin Console reads iiab_network_mode from /etc/iiab/iiab.ini
+# and uses /usr/bin/iiab-hotspot-on|off
+- name: Install /usr/bin/iiab-hotspot-on|off from template (root:root by default)
+  template:
+    src: "{{ item.src }}"
+    dest: "/usr/bin/{{ item.dest }}"
+    mode: "0755"
+  with_items:
+    - { src: 'hostapd/iiab-hotspot-on.j2', dest: 'iiab-hotspot-on' }
+    - { src: 'hostapd/iiab-hotspot-off.j2', dest: 'iiab-hotspot-off' }
 
-- name: (Re)Install named
-  include_tasks: named.yml
-  when: named_install and FQDN_changed and iiab_stage|int == 9
 
-- name: (Re)Install dhcpd
-  include_tasks: dhcpd.yml
-  when: dhcpd_install and FQDN_changed and iiab_stage|int == 9
+- name: Configuring Network if enabled
+  when: network_installed is defined and network_enabled
+  block:
 
-- name: (Re)Install Squid
-  include_tasks: squid.yml
-  when: squid_install and FQDN_changed and iiab_stage|int == 9
+  # 2022-07-22: Is './runrole --reinstall network' the new way to make this run?
+  #- name: (Re)Install Squid
+  #  include_tasks: squid.yml
+  #  when: squid_install and FQDN_changed and iiab_stage|int == 9
 
-#preprep for backends
-- name: Netplan in use on Ubuntu 18.04+
-  include_tasks: netplan.yml
-  when: is_ubuntu and not is_ubuntu_16
+    #### Start services
+    - name: computed_services
+      include_tasks: computed_services.yml
+    - name: enable_services
+      include_tasks: enable_services.yml
+  #### End services
 
-#### Start services
-- name: avahi
-  include_tasks: avahi.yml
-- name: hostapd
-  include_tasks: hostapd.yml
-- name: computed_services
-  include_tasks: computed_services.yml
-- name: enable_services
-  include_tasks: enable_services.yml
-#### End services
+  #### Start network layout
+    - name: netplan bridge
+      include_tasks: netplan-br0.yml
+      when: has_netplan and iiab_lan_iface == "br0"
 
-#### Start network layout
-#- name: Redhat networking
-#  include_tasks: ifcfg_mods.yml
-#  when: is_redhat
+    - name: NetworkManager in use
+      include_tasks: NM-debian.yml
+      when: network_manager_active
 
-- name: NetworkManager in use
-  include_tasks: NM-debian.yml
-  when: is_debuntu and network_manager_active
+    # 2025-03-21 #3961 WARNING: RasPiOS standard wifi firmware for RPi 4, 5, 500
+    # [ /lib/firmware/cypress/cyfmac43455-sdio-standard.bin i.e. BCM4345/6 wl0:
+    # Aug 29 2023 01:47:08 version 7.45.265 (28bca26 CY) FWID 01-b677b91b ] was
+    # crashing OFTEN during NM-debian.yml restart of NetworkManager.  Similarly,
+    # 'nmcli radio wifi off; nmcli radio wifi on' OFTEN triggers crashes on bare
+    # RasPiOS, as seen by: watch -n0 "iw reg get; iw dev; echo; dmesg | grep Firmware:"
 
-- name: systemd-networkd in use
-  include_tasks: sysd-netd-debian.yml
-  when: is_debuntu and systemd_networkd_active
+    # Workarounds with potential: (discussed on PR #3965)
+    # (1) Defer the setting of wifi country code (moved from just above
+    #     NM-debian.yml, to just below) -- tested to work well.
+    # (2) iiab-clone-wifi.service.j2 can add ap0 to the correct phyname
+    #     {phy0, phy1, ...} -- tested to work well.
+    # (3) raspberrypi/linux#6049 hack holds promise, adding brcmfmac.roamoff=1
+    #     brcmfmac.feature_disable=0x282000 to /boot/firmware/cmdline.txt (then
+    #     reboot) -- or add similar to /etc/modprobe.d/brcmfmac.conf (then reload
+    #     kernel module brcmfmac).  Well-tested workarounds above mean this hack
+    #     appears unnecessary: either as a one-off during IIAB install (carefully
+    #     avoiding reboots), or by deviating from RasPiOS longer term which risks
+    #     problematic side effects with other/past/future WiFi firmware -- or on
+    #     other hardware -- perhaps making IIAB microSD cards less portable.
 
-- name: Raspbian uses dhcpcd only with no N-M or SYS-NETD active
-  include_tasks: rpi_debian.yml
-  when: is_raspbian
+    # 2024-12-18: As `rfkill unblock wifi` formerly in rpi_debian.yml wasn't
+    # enough, especially with NM (NetworkManager)
+    # 2025-07-19: Use 2 additional sudo's below, for RasPiOS with desktop, to
+    # restore $SUDO_UID to the correct value (1000 for default graphical
+    # session) required by raspi-config -> do_wifi_country ->
+    # /usr/bin/wfpanelctl netman cset -> D-Bus -- otherwise the raspi-config
+    # command often fails (e.g. when operator's run sudo, via
+    # /usr/local/bin/iiab-network etc) -- leading Ansible to convey an
+    # unworkable SUDO_UID=0 or SUDO_UID=1001 ETC: "Failed to open connection to
+    # \"session\" message bus: Failed to connect to socket /run/user/0/bus: No
+    # such file or directory" -- arising from original commit "Update panel
+    # wifi country flag after setting" of Feb 16, 2024:
+    # https://github.com/RPi-Distro/raspi-config/commit/654184f40ffdbad093fd1017c08bf261abb49e7c
+    # - name: Run "sudo -u '#1000' sudo raspi-config nonint do_wifi_country {{ host_country_code }}" (using var host_country_code) to unblock WiFi, if RasPiOS -- this sets SUDO_UID=1000 (otherwise raspi-config often fails on RasPiOS with desktop)
+    #  command: sudo -u '#1000' sudo raspi-config nonint do_wifi_country {{ host_country_code }}
+    #  when: is_raspbian
 
-- name: Not RPi, Not NetworkManager, Not systemd-networkd in use
-  include_tasks: debian.yml
-  when: (not is_raspbian and not network_manager_active and not systemd_networkd_active and is_debuntu) or is_ubuntu_16
-#### end network layout
+    # 2025-09-01: just unblock the WiFi host_country_code becomes the fallback value in hostapd.conf
+    # if NetworkManager didn't connect to upstream WiFI or cmdline.txt has set cfg80211.ieee80211_regdom
+    #- name: Run "nmcli radio wifi on" to unblock WiFi when RasPiOS
+    #  command: nmcli radio wifi on
+    #  when: is_raspbian
 
-- name: Restart services
-  include_tasks: restart.yml
+    - name: systemd-networkd in use
+      include_tasks: sysd-netd-debian.yml
+      when: systemd_networkd_active
+      #when: systemd_networkd_active and not network_manager_active    # 2023-10-11: NOT the right way to solve #3657 (systemd-resolved issue on RasPiOS 12+) as this would damage Ubuntu/Mint.
+
+    # 2023-10-11: Should rpi_debian.yml go away in future, now that RasPiOS Bookworm uses NetworkManager?
+    - name: Raspbian can use dhcpcd only with no N-M or SYS-NETD active
+      include_tasks: rpi_debian.yml
+      when: is_raspbian and not network_manager_active
+
+    - name: Not RPi, Not NetworkManager, Not systemd-networkd in use
+      include_tasks: debian.yml
+      when:
+        - not is_raspbian and not network_manager_active and not systemd_networkd_active
+        - not is_proot
+    #### end network layout
+
+    - name: hostapd
+      include_tasks: hostapd.yml
+
+    - name: Restart services (and clone wifi to create ap0 if necessary)
+      include_tasks: restart.yml
+
+    # end block
+
+
+- name: Select RPi firmware mode
+  include_role:
+    name: firmware
+  when: rpi_model != "none"
+
+- name: "2025-03-31: WiFi firmware was crashing OFTEN in NM-debian.yml above, so let's help everyone better monitor in future, on RPi or elsewhere"
+  include_tasks: roles/firmware/tasks/warn_fw_crash.yml
+
+
+- name: Create {{ iiab_etc_path }}/install-flags/iiab-network-complete on second pass of network role
+  file:
+    path: "{{ iiab_etc_path }}/install-flags/iiab-network-complete"
+    state: touch
+  when: iiab_stage|int == 9

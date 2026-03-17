@@ -16,25 +16,8 @@
 - name: Install pylibs (IIAB's python libs)
   include_role:
     name: pylibs
+  #when: pylibs_installed is undefined
   #when: pylibs_install    # Flag might be created in future?
-
-# Also run by roles/1-prep/tasks/main.yml as required by OpenVPN.
-- name: SSHD
-  include_role:
-    name: sshd
-  when: sshd_install
-
-- name: Install named / BIND
-  include_tasks: roles/network/tasks/named.yml
-  when: named_install
-
-- name: Install dhcpd
-  include_tasks: roles/network/tasks/dhcpd.yml
-  when: dhcpd_install
-
-- name: Install Squid (and DansGuardian if dansguardian_install)
-  include_tasks: roles/network/tasks/squid.yml
-  when: squid_install
 
 - name: Install Bluetooth - only on Raspberry Pi
   include_role:
@@ -65,7 +48,8 @@
 - name: WWW_OPTIONS (WWW_BASE should have been installed earlier)
   include_role:
     name: www_options
-  #when: www_options_install    # Flag might be created in future?
+  #when: www_options_installed is undefined    # NO: as we encourage frequent settings changes here, e.g. php.ini and many others!
+
 
 - name: Recording STAGE 4 HAS COMPLETED ==================
   lineinfile:

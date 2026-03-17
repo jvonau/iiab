@@ -1,0 +1,19 @@
+# SEE ALSO /etc/squid/squid.conf
+#          /etc/squid/allow_url_regexs
+#          https://wiki.squid-cache.org/SquidFaq/SquidAcl
+# the leading dot matches anything preceding
+# don't remove the .lan line
+# change this to your domain if necessary
+.lan
+.laptop.org
+.olpcMAP.net
+.mapmeld.appspot.com
+.googlecode.com
+.googleapis.com
+.gstatic.com
+.unleashkids.org
+.iiab.io
+.hopeforhaitischildren.org
+.lenouvelliste.com
+.voanouvel.com
+.sugarlabs.org

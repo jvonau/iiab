@@ -4,12 +4,22 @@
 # PLEASE SEE /opt/iiab/iiab/scripts/iiab-diagnostics.README.md OR ONLINE HERE:
 # https://github.com/iiab/iiab/blob/master/scripts/iiab-diagnostics.README.md
 
-IIAB_RELEASE=`cat /etc/iiab/iiab.env | grep IIAB_RELEASE | cut -d'=' -f2`
-OS_VER=`cat /etc/iiab/iiab.env | grep OS_VER | cut -d'=' -f2`
-#HASH=`cd /opt/iiab/iiab; git log --pretty=format:'%h' -n 1`
-HASH1=`cd /opt/iiab/iiab; git log --pretty=format:'%H' -n 1`
-HASH2=`cd /opt/iiab/iiab-admin-console; git log --pretty=format:'%H' -n 1`
+IIAB_RELEASE=$(cat /etc/iiab/iiab.env | grep IIAB_RELEASE | cut -d'=' -f2)
+OS_VER=$(cat /etc/iiab/iiab.env | grep OS_VER | cut -d'=' -f2)
 YMDT=$(date +%F_%T_%Z)
+
+# git config --global --add safe.directory /opt/iiab/iiab    # Nec below, if non-root
+# HASH1=$(cd /opt/iiab/iiab; git log --pretty=format:'%H' -n 1)    # --pretty=format:'%h' (8 chars)
+# BRANCH1=$(cd /opt/iiab/iiab; git branch --show-current)
+# REMOTE_URL1=$(cd /opt/iiab/iiab; git config remote.$(git config branch.$BRANCH1.remote).url)
+# PR_COUNT1=$(cd /opt/iiab/iiab; git log "$(git describe --tags --abbrev=0)..HEAD" --oneline --grep='Merge pull request' | wc -l)
+# TAG_COMMITS1=$(cd /opt/iiab/iiab; git describe --tags | sed 's/-[^-]*$//; s/-\([[:digit:]][[:digit:]]*\)$/ (\1 commits)/')
+# git config --global --add safe.directory /opt/iiab/iiab-admin-console    # Nec below, if non-root
+# HASH2=$(cd /opt/iiab/iiab-admin-console; git log --pretty=format:'%H' -n 1)
+# BRANCH2=$(cd /opt/iiab/iiab-admin-console; git branch --show-current)
+# REMOTE_URL2=$(cd /opt/iiab/iiab-admin-console; git config remote.$(git config branch.$BRANCH2.remote).url)
+# PR_COUNT2=$(cd /opt/iiab/iiab-admin-console; git log "$(git describe --tags --abbrev=0)..HEAD" --oneline --grep='Merge pull request' | wc -l)
+# TAG_COMMITS2=$(cd /opt/iiab/iiab-admin-console; git describe --tags | sed 's/-[^-]*$//; s/-\([[:digit:]][[:digit:]]*\)$/ (\1 commits)/')
 
 echo -e "\nGathers IIAB diagnostics into 1 file, to accelerate troubleshooting.  USAGE:"
 echo
@@ -19,11 +29,13 @@ echo -e "   sudo iiab-diagnostics PATH/FILE1 PATH/FILE2 ...      # COMPLETE RESU
 echo
 echo -ne "Can you provide a \e[1mshort public nickname:\e[0m (no spaces!) "
 read nickname < /dev/tty
-if [ -z "$nickname" ]; then
+if [[ $nickname == "" ]]; then
     nickname="NONAME"
 fi
 
 # Build up a meaningful shared filename for DEV / IMPLEM / LEARNING team(s)
+mkdir -p /etc/iiab/diag
+chmod 777 /etc/iiab/diag    # So non-root users can run 'iiab-diagnostics'
 outfile=/etc/iiab/diag/${IIAB_RELEASE}_${OS_VER}_${YMDT}_$nickname
 
 # System "snapshots" (time-stamped output from this 'iiab-diagnostics' command)
@@ -38,12 +50,12 @@ function cat_file_raw() {    # $1 = path/filename; $2 = # of lines, for tail
             echo "FILE EXISTS BUT IS EMPTY!" >> $outfile
         elif [ $# -eq 1 ]; then
             echo >> $outfile
-            # Redact most passwords from /etc/iiab/local_vars.yml, /etc/hostapd/hostapd.conf, /etc/wpa_supplicant/wpa_supplicant.conf, /etc/netplan/*, /etc/network/interfaces, /etc/network/interfaces.d/* ETC -- not much to worry about in /etc/iiab/iiab.ini (' = ')
-            cat "$1" | sed 's/^\(\s*[[:alnum:]#_-]*\(psk\|passphrase\|password\):\).*/\1 [REDACTED]/; s/^\(\s*[[:alnum:]#_-]*\(psk\|passphrase\|password\)[= \t]\).*/\1[REDACTED]/' | iconv -t UTF-8//IGNORE >> $outfile
+            # Redact (mask) most passwords from /etc/iiab/local_vars.yml, /etc/hostapd/hostapd.conf, /etc/wpa_supplicant/wpa_supplicant.conf, /etc/netplan/*, /etc/network/interfaces, /etc/network/interfaces.d/*, /etc/NetworkManager/system-connections/* ETC -- not much to worry about in /etc/iiab/iiab.ini (' = ')
+            sed 's/^\(\s*[[:alnum:]#_-]*\(psk\|passphrase\|password\|wep-key[0-3]\):\).*/\1 [REDACTED]/; s/^\(\s*[[:alnum:]#_-]*\(psk\|passphrase\|password\|wep-key[0-3]\)[= \t]\).*/\1[REDACTED]/' "$1" | iconv -t UTF-8//IGNORE | cat -v >> $outfile
         else    # e.g. last 100 lines, maximum
             echo "                        ...ITS LAST $2 LINES FOLLOW..." >> $outfile
             echo >> $outfile
-            tail -$2 "$1" | sed 's/^\(\s*[[:alnum:]#_-]*\(psk\|passphrase\|password\):\).*/\1 [REDACTED]/; s/^\(\s*[[:alnum:]#_-]*\(psk\|passphrase\|password\)[= \t]\).*/\1[REDACTED]/' | iconv -t UTF-8//IGNORE >> $outfile
+            tail -$2 "$1" | sed 's/^\(\s*[[:alnum:]#_-]*\(psk\|passphrase\|password\|wep-key[0-3]\):\).*/\1 [REDACTED]/; s/^\(\s*[[:alnum:]#_-]*\(psk\|passphrase\|password\|wep-key[0-3]\)[= \t]\).*/\1[REDACTED]/' | iconv -t UTF-8//IGNORE | cat -v >> $outfile
         fi
         echo >> $outfile
     elif [ -h "$1" ]; then
@@ -82,22 +94,41 @@ function cat_dir() {
     fi
 }
 
-function cat_cmd() {                        # $1 = command + params, $2 = explanation
+function cat_cmd() {    # $1 = command + params, $2 = explanation
     echo "     $1  # $2"
     echo "=IIAB==========================================================================" >> $outfile
-    cmd=$(echo "$1" | sed 's/\s.*$//')        # Keep command on left; Drop params on right
-    pth=$(which $cmd | sed 's/[^/]*$//')    # Keep only path on left; Drop command on right
-    echo "COMMAND: $pth$1    # $2" >> $outfile
+    cmd=$(echo "$1" | sed 's/^\s*\(\S\S*\)\b.*$/\1/')    # Keep command on left; Drop params on right (NEC b/c 'command -v' interprets every word on the line!)
+    #pth=$(command -v $cmd | sed 's/[^/]*$//')           # Keep only path on left; Drop command & params on right
+    path_cmd=$(command -v $cmd)                                   # Use canonical path on left (would drop params on right, but over-interpret each word as a cmd!)
+    spc_params=$(echo "$1" | sed 's/^\s*\S\S*\s*/ /;s/\s*$//')    # Drop command on left; Keep a single space + params on right; RTrim
+    #spc_params=$(echo "$1" | sed 's/^\s*\S*//;s/\s*$//;s/^\s\s*/ /')    # LTrim + drop original path + command on left; RTrim; Compress whitespace in between
+    #spc_params=$(echo "$1" | sed 's/^[[:blank:]]*[^[:blank:]]*//;s/[[:blank:]]*$//;s/^[[:blank:]][[:blank:]]*/ /')    # Equivalent (POSIX compliant)
+    if [[ $path_cmd == "" ]]; then
+	if [[ $2 == "" ]]; then
+            echo "COMMAND: $1" >> $outfile
+	else
+            echo "COMMAND: $1    # $2" >> $outfile
+	fi
+    else
+	if [[ $2 == "" ]]; then
+	    echo "COMMAND: $path_cmd$spc_params" >> $outfile
+	else
+	    echo "COMMAND: $path_cmd$spc_params    # $2" >> $outfile
+	fi
+    fi
     echo >> $outfile
-    if [ -z "$pth" ]; then
+    if [[ $path_cmd == "" ]]; then
         echo "COMMAND NOT FOUND: $1" >> $outfile
     else
-        $(echo "eval $1") >> $outfile    # eval is nec within backticks, so | (pipes) work: https://stackoverflow.com/a/7184782
+        bash -c "$1" >> $outfile    # Works with | (pipes) and 'ls -l /lib/firmware/cypress/*43455*' etc!
+	#(exec $1 >> $outfile)      # Works with | (pipes) and 'ls -l /lib/firmware/cypress/*43455*' etc!  Subshell needed (parens) as exec then exits entire shell.
+	#eval $1 >> $outfile              # Should be identical to below, i.e. insufficient -- "eval" combine ARGs into a single string.
+        #$(echo "eval $1") >> $outfile    # "eval" works with | (pipes) per https://stackoverflow.com/a/7184782 BUT globbing like 'ls -l /lib/firmware/cypress/*43455*' FAILS to output lines w/ filenames that contain spaces (ugly IFS issues!)
     fi
     echo >> $outfile
 }
 
-function cat_tail() {     # $1 = path/filename; $2 = # of lines, for tail
+function cat_tail() {    # $1 = path/filename; $2 = # of lines, for tail
     echo "     $1"
     echo "=IIAB==========================================================================" >> $outfile
     cat_file_raw "$1" $2    # e.g. last 100 lines, maximum
@@ -106,56 +137,54 @@ function cat_tail() {     # $1 = path/filename; $2 = # of lines, for tail
 # START BUILDING UP THE FILE THAT'LL CONTAIN THE DIAGNOSTICS!
 echo -e "\nCompiling diagnostics..."
 
-echo -e "\n  0. Filename Header + Git Hashes + Raspberry Pi Model + OS"
+echo -e "\n  0. HW + SW Quick Summary"
 echo "This is: $outfile" >> $outfile
 echo >> $outfile
-echo -e "\n\n\n\n0. GIT HASHES + RASPBERRY PI MODEL + OS" >> $outfile
+echo -e "\n\n\n0. HW + SW Quick Summary" >> $outfile
 echo >> $outfile
-echo "iiab commit:               $HASH1" >> $outfile
-echo "iiab-admin-console commit: $HASH2" >> $outfile
-echo >> $outfile
-cat_file /etc/iiab/pr-list-pulled
-cat_file /sys/firmware/devicetree/base/model
-cat_file /etc/rpi-issue
-echo "-IIAB-EXPLANATION-OF-THE-ABOVE-------------------------------------------------" >> $outfile
-echo >> $outfile
+/opt/iiab/iiab/scripts/iiab-summary | iconv -t UTF-8//IGNORE | cat -v >> $outfile    # Make odd chars visible, just in case (e.g. dpaste.com pastebin disallows null chars)
 if [ -f /etc/rpi-issue ]; then
     echo "stage2 = Raspberry Pi OS Lite" >> $outfile
     echo "stage4 = Raspberry Pi OS with desktop" >> $outfile
     echo "stage5 = Raspberry Pi OS with desktop + recommended software" >> $outfile
-    echo >> $outfile
     echo "SEE https://github.com/RPi-Distro/pi-gen#stage-anatomy" >> $outfile
-else
-    echo "(This is NOT Raspberry Pi OS!)" >> $outfile
+    echo >> $outfile
 fi
-echo >> $outfile
-cat_file /etc/issue.net
-cat_file /etc/debian_version
+if [ -s /tmp/iiab-apps-to-be-installed ]; then
+    echo "iiab-apps-to-be-installed :" >> $outfile
+    cat /tmp/iiab-apps-to-be-installed >> $outfile
+    echo >> $outfile
+fi
+cat_cmd 'ls -ltr /etc/iiab/install-flags' 'IIAB install flags'
 
-echo -e '\n\n  1. Files Specially Requested: (from "iiab-diagnostics PATH/FILE1 PATH/FILE2")\n'
-echo -e '\n\n\n\n1. FILES SPECIALLY REQUESTED (FROM "iiab-diagnostics PATH/FILE1 PATH/FILE2")\n' >> $outfile
+echo -e '\n  1. Files Specially Requested: (from "iiab-diagnostics PATH/FILE1 PATH/FILE2")\n'
+echo -e '\n\n\n1. FILES SPECIALLY REQUESTED (FROM "iiab-diagnostics PATH/FILE1 PATH/FILE2")\n' >> $outfile
 for f in "$@"; do
     cat_file $f
 done
 
 if [ $# -eq 0 ]; then
-    echo -e "  2. Regular Files:\n"
+    echo -e "  2. Regular Files etc:\n"
 else
-    echo -e "\n  2. Regular Files:\n"
+    echo -e "\n  2. Regular Files etc:\n"
 fi
-echo -e "\n\n\n\n2. REGULAR FILES\n" >> $outfile
+echo -e "\n\n\n2. REGULAR FILES ETC\n" >> $outfile
 #cat_file /dev/sda                    # Device "file" test
 #cat_file /nonsense                   # Non-existence test
 #cat_file /opt/iiab/iiab              # Directory test
 #cat_file /tmp/empty-file             # Empty file test
 #cat_file /usr/bin/iiab-support-on    # Symlink test
-cat_file /etc/iiab/openvpn_handle
 cat_file /.iiab-image
+cat_cmd 'hostnamectl | grep -v " ID: "' 'Machine summary'
+cat_file /etc/default/locale    # e.g. on Debian 12
+cat_file /etc/locale.conf       # e.g. on Debian 13+ and Ubuntu
+cat_cmd 'localectl' 'Locale settings'
+cat_cmd 'locale' 'Current locale vars'
+cat_cmd 'locale -a' 'Available locales'
 cat_file /etc/iiab/iiab.env
 cat_file /etc/iiab/iiab.ini
-cat_file /etc/iiab/local_vars.yml      # Redacts most passwords above
+cat_file /etc/iiab/local_vars.yml    # Redacts most passwords above
 cat_file /etc/iiab/iiab_state.yml
-#cat_file /etc/iiab/config_vars.yml    # No longer common
 cat_file /etc/resolv.conf
 cat_file /etc/network/interfaces
 cat_file /etc/hostapd/hostapd.conf                  # Redacts most passwords above
@@ -169,50 +198,80 @@ cat_file /library/www/html/home/menu.json
 #cat_file /tmp/all-ansible-vars
 
 echo -e "\n  3. Content of Directories: (1-level deep)\n"
-echo -e "\n\n\n\n3. CONTENT OF DIRECTORIES (1-LEVEL DEEP)\n" >> $outfile
+echo -e "\n\n\n3. CONTENT OF DIRECTORIES (1-LEVEL DEEP)\n" >> $outfile
 cat_dir /etc/network/interfaces.d
 cat_dir /etc/systemd/network
-cat_dir /etc/NetworkManager/system-connections
+cat_dir /etc/NetworkManager/system-connections    # Redacts most passwords above
 cat_dir /etc/netplan    # Redacts most passwords above
 #cat_dir /etc/sysconfig/network-scripts/if-cfg*    # No longer common
 #cat_dir /etc/network    # Above file /etc/network/interfaces suffices
 
 echo -e "\n  4. Output of Commands:\n"
-echo -e "\n\n\n\n\n4. OUTPUT OF COMMANDS\n" >> $outfile
+echo -e "\n\n\n\n4. OUTPUT OF COMMANDS\n" >> $outfile
 cat_cmd 'uname -a' 'Linux kernel'
+cat_cmd 'sudo dmesg | grep -i "command line:"' 'Kernel boot parameters'
 cat_cmd 'free' 'RAM memory'
 cat_cmd 'lscpu' 'CPU details'
+cat_cmd 'rpi-eeprom-update' 'RPi Bootloader EEPROM'
 cat_cmd 'df -h' 'Disk usage'
+cat_cmd 'df -ah' 'Disk usage detail'
 cat_cmd 'lsblk' 'Partition mount points'
 cat_cmd 'blkid' 'Mount point details'
+cat_file /etc/fstab
+cat_cmd 'lshw -C network' 'Network hardware/interfaces'
 cat_cmd 'ip addr' 'Network interfaces'
 cat_cmd 'ifconfig' 'Network interfaces (old view)'
 cat_cmd 'ip route' 'Routing table'
 cat_cmd 'netstat -rn' 'Routing table (old view)'
-cat_cmd 'brctl show' 'Bridge for LAN side'
+cat_cmd 'bridge -d link' 'Bridge for LAN side'
 cat_cmd 'sudo netstat -natp' 'Ports/Services in use'
 cat_cmd 'systemctl status dnsmasq' 'Is dnsmasq running?'
 cat_cmd 'sudo journalctl -b 0 -u dnsmasq' 'dnsmasq log'
 cat_cmd 'networkctl' 'systemd-networkd status'
 cat_cmd 'nmcli d' 'NetworkManager status'
 cat_cmd 'sudo journalctl -b 0 -u networkd-dispatcher' 'networkd-dispatcher log'
+cat_cmd 'rfkill list' 'Are WiFi and Bluetooth interfaces blocked?'
 cat_cmd 'iw reg get' 'Detected WiFi country code / legal frequencies'
 cat_cmd 'iw dev' 'List wireless interfaces'
 cat_cmd 'iw list' 'List capabilities of all wireless devices'
-cat_cmd 'systemctl status hostapd' 'Downstream Wi-Fi: Is hostapd running?'
-cat_cmd 'ls -l /etc/wpa_supplicant' 'Upstream Wi-Fi'
+cat_cmd 'systemctl status hostapd' 'Downstream WiFi: Is hostapd running?'
+cat_cmd 'ls -l /etc/wpa_supplicant' 'Upstream WiFi'
 cat_cmd 'ps -AH' 'Process hierarchy: staging of hostapd & wpa_supplicant?'
-cat_cmd 'dmesg | grep brcm' 'Diagnostic messages: RPi Wi-Fi firmware'
+cat_cmd 'sudo journalctl -b | grep wpa_supplicant' 'wpa_supplicant log since boot'
+cat_cmd 'sudo journalctl -b | grep NetworkManager | head -100' 'NetworkManager log since boot'
+#cat_cmd 'sudo dmesg | grep brcm' 'Diagnostic messages: RPi WiFi firmware'
+cat_cmd 'sudo dmesg | grep Firmware:' '(WiFi) firmware boot diagnostics'
+cat_cmd 'ls -l /lib/firmware/cypress/*43430*' 'WiFi firmware for: RPi Zero W, Zero 2 W & 3'
+cat_cmd 'ls -l /lib/firmware/cypress/*43455*' 'WiFi firmware for: RPi 3 B+, 4, 5 & 500'
+cat_cmd 'ls -l /etc/alternatives/cyfmac*' 'WiFi firmware RasPiOS symlinks'
+cat_cmd 'ls -l /sys/class/ieee80211/' 'phyname > phy0 indicates WiFi firmware crashed since boot'
+cat_cmd "sudo dmesg | grep -B10 -A25 'Firmware has halted or crashed' | head -110" 'WiFi firmware crash details'
+cat_cmd 'sudo dmesg | grep -i -e 80211 -e 802\.11 -e wireless -e wifi -e wlan -e broadcom -e brcm -e bcm -e realtek | head -100' 'WiFi firmware/driver msgs'
+cat_cmd 'lspci -nn' 'Devices on PCI buses'
 cat_cmd 'env' 'Environment variables'
-#cat_cmd 'ansible localhost -m setup 2>/dev/null' 'All Ansible facts'    # For cleaner scraping of Ansible vars, consider "./runrole all-vars /tmp/all-ansible-vars" 27-31 lines above?
+cat_cmd 'node -v' 'Node.js version'
+cat_cmd 'npm -v' 'npm version'
+cat_cmd 'sudo journalctl -u nginx -n 20' 'nginx error log' 
+cat_cmd '/opt/iiab/kiwix/bin/kiwix-serve --version' 'kiwix-tools'
+cat_cmd 'cd /usr/local/calibre-web-py3; sudo git log --graph --oneline --decorate | head -50' 'Calibre-Web version'
+cat_cmd 'sudo lb --version' 'xklb version'
+cat_cmd 'sudo yt-dlp --version' 'yt-dlp version'
+cat_cmd 'systemctl status calibre-web' 'Is Calibre-Web running?'
+cat_cmd 'sudo journalctl -u calibre-web | tail -100' 'Calibre-Web systemd log'
+cat_tail /var/log/calibre-web.log 100
+cat_tail /var/log/xklb.log 300
+cat_cmd 'sudo journalctl -t IIAB-CMDSRV' 'Admin Console CMDSRV log'
+#cat_cmd 'ansible localhost -m setup 2>/dev/null' 'All Ansible facts'    # For cleaner scraping of Ansible vars, consider "./runrole all-vars /tmp/all-ansible-vars" ~70 lines above?
 
 echo -e "\n  5. Firewall Rules:\n"
-echo -e "\n\n\n\n5. FIREWALL RULES\n" >> $outfile
-cat_file /usr/bin/iiab-gen-iptables
+echo -e "\n\n\n5. FIREWALL RULES\n" >> $outfile
+#cat_file /usr/bin/iiab-gen-iptables
 cat_cmd 'sudo iptables-save' 'Firewall rules'
+cat_cmd 'sudo ufw status verbose' 'Firewall status & rules'
 
-echo -e "\n  6. Log Files: (last 100 lines of each)\n"
-echo -e "\n\n\n\n6. LOG FILES (LAST 100 LINES OF EACH)\n" >> $outfile
+echo -e "\n  6. Log Files: (e.g. last 100 lines of each)\n"
+echo -e "\n\n\n6. LOG FILES (e.g. LAST 100 LINES OF EACH)\n" >> $outfile
+cat_cmd 'grep -B2 "SEE ERROR ABOVE" /opt/iiab/iiab/*.log' 'for skip_role_on_error'
 cat_tail /opt/iiab/iiab/iiab-install.log 100
 cat_tail /opt/iiab/iiab/iiab-configure.log 100
 cat_tail /opt/iiab/iiab/iiab-debug.log 100
@@ -220,6 +279,8 @@ cat_tail /opt/iiab/iiab/iiab-network.log 100
 cat_tail /opt/iiab/iiab-admin-console/admin-install.log 100
 cat_tail /var/log/messages 100
 cat_tail /var/log/syslog 100
+cat_cmd 'sudo journalctl -p3 -n100' 'Show errors (and higher priority messages) from recent boots'
+cat_cmd 'systemctl --failed' 'Show systemd services that failed'
 
 linecount=$(wc -l $outfile | sed 's/\s.*$//')
 sizecount=$(du -h $outfile | sed 's/\s.*$//')
@@ -232,17 +293,22 @@ echo -e "   $outfile\e[0m"
 #else
 echo
 echo -ne "\e[42;1mPublish it to a web pastebin? [Y/n]\e[0m "
-read ans < /dev/tty
+read -n 1 -r ans < /dev/tty
+echo
 #fi
 
 echo -e "\e[1m"
-if [ "$ans" == "" ] || [ "$ans" == "y" ] || [ "$ans" == "Y" ]; then
-    echo -ne "PUBLISHING TO URL... "
-    #pastebinit -b dpaste.com < $outfile
-    pastebinit -b sprunge.us < $outfile    # Run 'pastebinit -l' to list other possible pastebin site URLs
+#if [ "$ans" == "" ] || [ "$ans" == "y" ] || [ "$ans" == "Y" ]; then
+if ! [[ $ans =~ ^[nNqQ]$ ]]; then
+    echo -ne "PUBLISHING TO URL... "    # Run 'pastebinit -l' to list other possible pastebin site URLs.  ASIDE: Quirky pastebin-like https://temp.sh can sometimes work (like a file transfer service) for larger files.
+    pastebinit -b paste.centos.org $outfile    # 2024-08-10: Basic line numbers & "4 weeks" good enough?
+    #nc termbin.com 9999 < $outfile            # 2024-08-10: No line numbers & limited to 7 days (rudimentary but reliable option if nec in future?!)
+    #pastebinit -b dpaste.com $outfile         # 2024-08-10: Unfortunately limited to 30 days by default.  Claims 1,000,000 character maximum pastebin size (or usage quota within N days?)  But newly restricted to LESS THAN 500 LINES (e.g. after IP address blocks & email appeals kinda work, but take almost 24h each time!)
+    #pastebinit -b sprunge.us $outfile         # Stopped working for many weeks (mid-2023, and again in mid-2024)
+    #pastebinit -b paste2.org $outfile         # Spammy/dangerous pastebins
 else
     echo -e "If you later decide to publish it, run:"
     echo
-    echo -e "   pastebinit -b sprunge.us < $outfile"
+    echo -e "   pastebinit -b paste.centos.org $outfile"
 fi
 echo -e "\e[0m"

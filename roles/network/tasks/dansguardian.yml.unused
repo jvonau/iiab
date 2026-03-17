@@ -1,0 +1,62 @@
+- name: Install dansguardian package
+  package:
+    name: dansguardian
+    state: present
+
+- name: Install /etc/dansguardian/dansguardian.conf from template (Fedora)
+  template:
+    src: roles/network/templates/squid/dansguardian.conf.j2
+    dest: /etc/dansguardian/dansguardian.conf
+    owner: dansguardian
+    group: dansguardian
+    mode: '0640'
+  when: ansible_distribution == "Fedora"
+
+- name: Install /etc/dansguardian/dansguardian.conf from template (debuntu)
+  template:
+    src: roles/network/templates/squid/dansguardian.conf.debian.j2
+    dest: /etc/dansguardian/dansguardian.conf
+    owner: dansguardian
+    group: dansguardian
+    mode: '0640'
+  when: is_debuntu
+
+- name: Install /etc/dansguardian/dansguardian.conf from template (CentOS)
+  template:
+    src: roles/network/templates/squid/dansguardian.conf.centos.j2
+    dest: /etc/dansguardian/dansguardian.conf
+    owner: dansguardian
+    group: vscan
+    mode: '0640'
+  when: ansible_distribution == "CentOS"
+
+- name: Create directory /var/log/dansguardian (OS's other than CentOS)
+  file:
+    path: /var/log/dansguardian
+    owner: dansguardian
+    group: dansguardian
+    mode: '0750'
+    state: directory
+  when: ansible_distribution != "CentOS"
+
+- name: Create directory /var/log/dansguardian (CentOS)
+  file:
+    path: /var/log/dansguardian
+    owner: dansguardian
+    group: vscan
+    mode: '0750'
+    state: directory
+  when: ansible_distribution == "CentOS"
+
+
+# RECORD DansGuardian AS INSTALLED
+
+- name: "Set 'dansguardian_installed: True'"
+  set_fact:
+    dansguardian_installed: True
+
+- name: "Add 'dansguardian_installed: True' to {{ iiab_state_file }}"
+  lineinfile:
+    path: "{{ iiab_state_file }}"    # /etc/iiab/iiab_state.yml
+    regexp: '^dansguardian_installed'
+    line: 'dansguardian_installed: True'

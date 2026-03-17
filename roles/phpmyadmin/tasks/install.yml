@@ -1,22 +1,22 @@
-- name: "Set 'apache_install: True' and 'apache_enabled: True'"
-  set_fact:
-    apache_install: True
-    apache_enabled: True
-
-- name: APACHE - run 'httpd' role
-  include_role:
-    name: httpd
+- name: Record (initial) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df1
 
 
-- name: Unarchive {{ phpmyadmin_dl_url }} (7+ MB) to /opt (60+ MB)
+- name: Download {{ phpmyadmin_dl_url }} to {{ downloads_dir }}
+  get_curl:
+    url: "{{ phpmyadmin_dl_url }}"    # e.g. https://files.phpmyadmin.net/phpMyAdmin/5.0.4/phpMyAdmin-5.0.4-all-languages.tar.xz
+    dest: "{{ downloads_dir }}/phpmyadmin.tar.xz"    # /opt/iiab/downloads
+    timeout: "{{ download_timeout }}"
+  register: phpmyadmin_dl
+
+- name: Unarchive {{ phpmyadmin_dl.dest }} (7+ MB) to /opt (60+ MB)
   unarchive:
-    remote_src: yes    # Overwrite even if "already exists on the target"
-    src: "{{ phpmyadmin_dl_url }}"    # e.g. https://files.phpmyadmin.net/phpMyAdmin/5.1.0/phpMyAdmin-5.1.0-all-languages.tar.xv
+    src: "{{ phpmyadmin_dl.dest }}"    # e.g. https://files.phpmyadmin.net/phpMyAdmin/5.1.1/phpMyAdmin-5.1.1-all-languages.tar.xv
     dest: /opt
     owner: "{{ apache_user }}"    # www-data on debuntu
     group: "{{ apache_user }}"
-    #timeout: "{{ download_timeout }}" # Use get_url if timeout (200s) required
-  when: internet_available
+    #timeout: "{{ download_timeout }}"    # Use get_url if timeout (100s) required
 
 - name: Symlink /opt/phpmyadmin -> {{ phpmyadmin_name }}
   file:
@@ -33,14 +33,30 @@
     owner: "{{ apache_user }}"
     group: "{{ apache_user }}"
 
-- name: Install /etc/{{ apache_conf_dir }}/phpmyadmin.conf from template
-  template:
-    src: phpmyadmin.j2
-    dest: "/etc/{{ apache_conf_dir }}/phpmyadmin.conf"
-  #when: apache_installed is defined
+# Above 3 stanzas set link/tree/contents ownership to {{ apache_user }}:root
+# OOPS: CHOWN BELOW CHANGED LINK ALONE (TREE/CONTENTS REMAINED root:root)
+
+# - name: Change the owner of the PHP tree to Apache
+#   shell: "chown -R {{ apache_user }} /opt/phpmyadmin"
+#   #file:
+#   #  path: "/opt/{{ phpmyadmin_name }}"
+#   #  owner: "{{ apache_user }}"
+#   #  recurse: yes
+#   #  state: directory
 
 
 # RECORD phpMyAdmin AS INSTALLED
+
+- name: Record (final) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df2
+
+- name: Add 'phpmyadmin_disk_usage = {{ df2.stdout | int - df1.stdout | int }}' to {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
+    section: phpmyadmin
+    option: phpmyadmin_disk_usage
+    value: "{{ df2.stdout | int - df1.stdout | int }}"
 
 - name: "Set 'phpmyadmin_installed: True'"
   set_fact:

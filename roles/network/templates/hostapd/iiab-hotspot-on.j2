@@ -1,0 +1,68 @@
+#!/bin/bash
+{% if iiab_wireless_lan_iface is undefined %}
+echo -e "\nUH-OH: Your Wi-Fi hardware was not found'\n"
+echo -e "If you add Wi-Fi hardware, check network_install and network_enabled in /etc/iiab/local_vars.yml and sudo iiab-network\n"
+{% else %}
+{% if network_installed is undefined %}
+echo -e "IIAB networking is not installed:\n"
+echo -e "If you want to install it, check network_install and network_enabled in /etc/iiab/local_vars.yml and then run: sudo iiab-network\n"
+echo -e "For details, see: https://github.com/iiab/iiab/pull/3302\n"
+{% else %}
+{% if not network_enabled %}
+echo -e "IIAB networking is disabled:\n"
+echo -e "If you want to enable it, check network_enabled in /etc/iiab/local_vars.yml and then run: sudo iiab-network\n"
+echo -e "For details, see: https://github.com/iiab/iiab/pull/3302\n"
+{% else %}
+{% if not can_be_ap %}
+echo -e "\nUH-OH: Your Wi-Fi firmware doesn't support AP mode, according to 'iw list'\n"
+echo -e "If you add Wi-Fi hardware, run 'cd /opt/iiab/iiab' then 'sudo ./iiab-network'\n"
+echo -e "For details, see: https://github.com/iiab/iiab/pull/3179\n"
+exit 1
+{% else %}
+sed -i "s/^HOSTAPD_ENABLED.*/HOSTAPD_ENABLED=True/" {{ iiab_env_file }}
+{% if wifi_up_down %}
+systemctl enable iiab-clone-wifi.service
+systemctl enable hostapd
+systemctl enable iiab-wifi-test.service
+#exit 0
+{% else %}
+{% if dhcpcd_result == "enabled" %}
+# just do what we have always done in hotspot-on
+cp -f /etc/hostapd/hostapd.conf.iiab /etc/hostapd/hostapd.conf
+sed -i "s/^#denyinterfaces/denyinterfaces/" /etc/dhcpcd.conf
+# shut down wlan0 in case connected to network
+ip link set wlan0 down
+systemctl enable hostapd
+#systemctl daemon-reload
+systemctl daemon-reload
+systemctl restart dhcpcd
+systemctl start hostapd
+systemctl start dnsmasq
+
+# Temporary promiscuous-mode workaround for RPi's WiFi "10SEC disease"
+# Disable "promiscuous" on wlan0 when AP (i.e. no WiFi gateway)
+# SEE ALSO iiab-hotspot-off + /usr/libexec/iiab-startup.sh
+# https://github.com/iiab/iiab/issues/638#issuecomment-355455454
+#if grep -qi raspbian /etc/*release; then
+#    ip link set dev wlan0 promisc off
+#fi
+{% else %}
+#ubuntu (or Mint, or pure Debian?)
+if [ -f /etc/NetworkManager/conf.d/wifi-manage.conf ]; then
+    sed -i "s|managed=1|managed=0|" /etc/NetworkManager/conf.d/wifi-manage.conf
+fi
+systemctl enable hostapd
+#exit 0
+{% endif %}
+#if dhcpcd_result == "enabled"
+{% endif %}
+#wifi_up_down
+echo -e "\nPlease reboot to activate IIAB hotspot (Wi-Fi access point) via hostapd.\n"
+{% endif %}
+#can_be_ap
+{% endif %}
+#network_enabled
+{% endif %}
+#networking not installed
+{% endif %}
+#Wifi not found

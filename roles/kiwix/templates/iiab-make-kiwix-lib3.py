@@ -52,10 +52,15 @@ def main():
     zim_files, zim_versions = iiab.get_zim_list(zim_path)
 
     # Remove zims not in file system from library.xml
-    remove_list_str = ""
-    for item in path_to_id_map:
-        if item not in zim_files:
-            iiab.rem_libr_xml(path_to_id_map[item], kiwix_library_xml)
+    # remove_list_str = ""
+    try:
+        for item in path_to_id_map:
+            if item not in zim_files:
+                iiab.rem_libr_xml(path_to_id_map[item], kiwix_library_xml)
+    except:
+        print("Failed to remove missing zims from library.xml")
+        print("As a workaround, try running with -f to force rebuild of library.xml")
+        sys.exit(1)
 
     # Add zims from file system that are not in library.xml
     for item in zim_files:
@@ -67,7 +72,11 @@ def main():
         print("Writing zim_versions_idx")
         iiab.read_lang_codes() # needed by following
         zim_menu_defs = adm.get_zim_menu_defs() # read all menu defs
-        adm.write_zim_versions_idx(zim_versions, kiwix_library_xml, zim_version_idx_dir, zim_menu_defs)
+        try:
+            adm.write_zim_versions_idx(zim_versions, kiwix_library_xml, zim_version_idx_dir, zim_menu_defs)
+        except:
+            print("Failed to write zim_version_idx.json")
+            sys.exit(1)
     sys.exit()
 
 def parse_args():

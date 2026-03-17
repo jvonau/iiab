@@ -3,20 +3,18 @@
     name: dnsmasq
     state: present
 
-- name: Install /etc/dnsmasq.d/dnsmasq-iiab, allowing systemd-resolved AND dnsmasq to work (#1306) and custom unit file
+- name: Install /etc/dnsmasq.d/dnsmasq-iiab, allowing systemd-resolved AND dnsmasq to work (#1306) and custom unit file (root:root by default)
   template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
-    owner: root
-    group: root
     mode: "{{ item.mode }}"
   with_items:
-   - { src: 'roles/network/templates/network/dnsmasq.service.u18', dest: '/etc/systemd/system/iiab-dnsmasq.service', mode: '0644' }
-   - { src: 'roles/network/templates/network/dnsmasq-iiab', dest: '/etc/dnsmasq.d/dnsmasq-iiab', mode: '644' }
+#    - { src: 'roles/network/templates/network/dnsmasq.service.u18', dest: '/etc/systemd/system/iiab-dnsmasq.service', mode: '0644' }
+    - { src: 'roles/network/templates/network/dnsmasq-iiab.j2', dest: '/etc/dnsmasq.d/dnsmasq-iiab', mode: '644' }
 
-- name: Don't use stock dnsmasq systemd unit file during boot but start now
+- name: Don't use stock dnsmasq systemd unit file during boot, dnsmasq started via systemd-dispatcher
   systemd:
     name: dnsmasq
     daemon_reload: yes
     enabled: no
-    state: restarted
+    state: stopped

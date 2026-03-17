@@ -1,23 +1,17 @@
 # Lokole PDF (User's Guide) gets copied for offline use (http://box/info) here:
-# https://github.com/iiab/iiab/blob/master/roles/httpd/templates/refresh-wiki-docs.sh#L51-L52
+# https://github.com/iiab/iiab/blob/master/roles/www_base/templates/iiab-refresh-wiki-docs.sh#L51-L52
 
 
-- name: "Set 'apache_install: True' and 'apache_enabled: True'"
-  set_fact:
-    apache_install: True
-    apache_enabled: True
-
-- name: APACHE - run 'httpd' role
-  include_role:
-    name: httpd
+- name: Record (initial) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df1
 
 
-- name: "Install 8 packages for Lokole: python3, python3-pip, python3-venv, python3-dev, python3-bcrypt, libffi-dev, libssl-dev, libopenjp2-7"
+- name: Install 12 packages for Lokole
   apt:
     name:
-      - python3
-      - python3-pip
-      - python3-venv
+      #- python3    # 2022-12-21: IIAB pre-req, see scripts/local_facts.fact
+      #- python3-pip
       - python3-dev
       - python3-bcrypt    # 2019-10-14: Should work across modern Linux OS's
       #- bcrypt does not exist on Ubuntu 19.10
@@ -25,20 +19,25 @@
       - libjpeg-dev
       - libssl-dev
       - libopenjp2-7    # 2020-02-01: To solve bug #2221
+      - supervisor
+      - usb-modeswitch
+      - usb-modeswitch-data
+      - mobile-broadband-provider-info
+      - ppp
+      - wvdial
     state: present
+
 
 # For development purposes -- To install Lokole from a given commit, add the
 # following line to roles/lokole/defaults/main.yml:
 # lokole_commit: <git_commit_id>
 - name: "OPTIONAL: pip install opwen_email_client (Lokole, git commit {{ lokole_commit }}) from GitHub to {{ lokole_venv }}, if lokole_commit is defined"
   pip:
-    name: "git+https://github.com/ascoderu/lokole.git@{{ lokole_commit }}#egg=opwen_email_client"
+    name: "git+{{ lokole_repo }}@{{ lokole_commit }}#egg=opwen_email_client"
     virtualenv: "{{ lokole_venv }}"
     virtualenv_command: python3 -m venv "{{ lokole_venv }}"
-    extra_args: --no-cache-dir    # To avoid caching issues e.g. soon after new releases hit https://pypi.org/project/opwen-email-client/
-  when:
-    - internet_available
-    - lokole_commit is defined
+    extra_args: --no-cache-dir --force-reinstall    # To avoid caching issues e.g. soon after new releases hit https://pypi.org/project/opwen-email-client/
+  when: lokole_commit is defined
 
 # For development purposes -- To install a given pip version of Lokole, add
 # the following line to roles/lokole/defaults/main.yml:
@@ -50,9 +49,7 @@
     virtualenv: "{{ lokole_venv }}"
     virtualenv_command: python3 -m venv "{{ lokole_venv }}"
     extra_args: --no-cache-dir    # To avoid caching issues e.g. soon after new releases hit https://pypi.org/project/opwen-email-client/
-  when:
-    - internet_available
-    - lokole_version is defined
+  when: lokole_version is defined
 
 - name: "DEFAULT: pip install opwen_email_client (Lokole, latest available version) from PyPI to {{ lokole_venv }}, if above vars both UNdefined"
   pip:
@@ -60,60 +57,103 @@
     virtualenv: "{{ lokole_venv }}"
     virtualenv_command: python3 -m venv "{{ lokole_venv }}"
     extra_args: --no-cache-dir    # To avoid caching issues e.g. soon after new releases hit https://pypi.org/project/opwen-email-client/
-  when:
-    - internet_available
-    - lokole_commit is undefined and lokole_version is undefined
+  when: lokole_commit is undefined and lokole_version is undefined
 
-- name: Compile translations
+# - name: Compile translations
+#   shell: |
+#     python_version=$(python3 -c 'from sys import version_info; print("%s.%s" % (version_info.major, version_info.minor));';)
+#     {{ lokole_venv }}/bin/pybabel compile -d {{ item }}/translations
+#   with_items:
+#     - "{{ lokole_venv }}/lib/python${python_version}/site-packages/opwen_email_client/webapp"
+
+# 2022-12-21: python_version determined by scripts/local_facts.fact -- to match templates/lokole-nginx.conf.j2
+- name: Compile translations for Python {{ python_version }}
   shell: |
-    python_version=$(python3 -c 'from sys import version_info; print("%s.%s" % (version_info.major, version_info.minor));';)
     {{ lokole_venv }}/bin/pybabel compile -d {{ item }}/translations
   with_items:
-    - "{{ lokole_venv }}/lib/python${python_version}/site-packages/opwen_email_client/webapp"
+    - "{{ lokole_venv }}/lib/python{{ python_version }}/site-packages/opwen_email_client/webapp"
 
-- name: mkdir {{ lokole_run_directory }}
+- name: Create system {{ lokole_user }} user
+  ansible.builtin.user:
+    state: present
+    name: "{{ lokole_user }}"
+    #group: "{{ lokole_user }}"
+    groups: dialout, dip
+    system: yes
+    #uid: "{{ lokole_uid }}"
+    home: "{{ lokole_home_dir }}"
+
+- name: "Add user '{{ apache_user }}' to group '{{ lokole_user }}' for socket access via NGINX"
+  ansible.builtin.user:
+    name: "{{ apache_user }}"
+    groups: "{{ lokole_user }}"
+    append: yes
+
+- name: mkdir {{ lokole_run_dir }}
   file:
     state: directory
-    path: "{{ lokole_run_directory }}"
-    #mode: a+x    # Not nec, given above 'state: directory'
+    path: "{{ lokole_run_dir }}/lokole_restarter"
+    group: "{{ lokole_user }}"
+    owner: "{{ lokole_user }}"
+    mode: g+rw
 
-- name: Install {{ lokole_run_directory }}/webapp_secrets.sh from template, to configure Lokole
+- name: mkdir {{ lokole_log_dir }}
+  file:
+    state: directory
+    path: "{{ lokole_log_dir }}"
+    group: "{{ lokole_user }}"
+    owner: "{{ lokole_user }}"
+    mode: g+rw
+
+- name: Generate key and salt
+  set_fact:
+    lokole_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits,_ length=32') }}"
+    lokole_salt: "{{ lookup('password', '/dev/null chars=ascii_letters,digits,_ length=16') }}"
+
+- name: Install {{ lokole_settings }}
   template:
-    src: webapp_secrets.sh.j2
-    dest: "{{ lokole_run_directory }}/webapp_secrets.sh"
-    mode: a+x
+    src: settings.env.j2
+    dest: "{{ lokole_settings }}"
+    group: "{{ lokole_user }}"
+    owner: "{{ lokole_user }}"
+    mode: g+rw
 
-- name: Install {{ lokole_run_directory }}/webapp.sh from template, to configure Gunicorn
-  template:
-    src: webapp.sh.j2
-    dest: "{{ lokole_run_directory }}/webapp.sh"
-    mode: a+x
+#- name: Fixup supervisorctl
+#  file:
+#    path: /usr/bin/supervisorctl
+#    owner: root
+#    group: "{{ lokole_user }}"
+#    mode: u=rw+s,g=rx,o=rx
 
-- name: Create admin user with password, for http://box{{ lokole_url }}    # http://box/lokole
-  shell: |
-    . {{ lokole_run_directory }}/webapp_secrets.sh
-    {{ lokole_venv }}/bin/manage.py createadmin --name='{{ lokole_admin_user }}' --password='{{ lokole_admin_password }}'
-
-- name: Install /etc/{{ apache_conf_dir }}/lokole.conf from template, for http://box{{ lokole_url }} via Apache    # http://box/lokole
-  template:
-    src: lokole.conf.j2
-    dest: "/etc/{{ apache_conf_dir }}/lokole.conf"
-    mode: 0644
-  when: apache_install
-
-- name: Install unit files {lokole.service, celery.service, celerybeat.service, lokole_restarter.service} into /etc/systemd/system, from template
+- name: Install {{ lokole_confd }} templates to configure Lokole
   template:
     src: "{{ item.src }}"
-    dest: "{{ item.dest}}"
-    mode: 0644
+    dest: "{{ lokole_confd }}/{{ item.dest }}"
+    group: "{{ lokole_user }}"
+    owner: "{{ lokole_user }}"
+    mode: "0644"
   with_items:
-    - { src: 'lokole.service.j2', dest: '/etc/systemd/system/lokole.service' }
-    - { src: 'celery.service.j2', dest: '/etc/systemd/system/celery.service' }
-    - { src: 'celerybeat.service.j2', dest: '/etc/systemd/system/celerybeat.service' }
-    - { src: 'lokole_restarter.service.j2', dest: '/etc/systemd/system/lokole_restarter.service' }
+    - { src: 'lokole_gunicorn.conf.j2', dest: 'lokole_gunicorn.conf' }
+    - { src: 'lokole_celery_beat.conf.j2', dest: 'lokole_celery_beat.conf' }
+    - { src: 'lokole_celery_worker.conf.j2', dest: 'lokole_celery_worker.conf' }
+    - { src: 'lokole_restarter.conf.j2', dest: 'lokole_restarter.conf' }
+
+- name: Create Lokole admin user with password, for http://box{{ lokole_url }}    # http://box/lokole
+  include_tasks: setup.yml
 
 
 # RECORD Lokole AS INSTALLED
+
+- name: Record (final) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df2
+
+- name: Add 'lokole_disk_usage = {{ df2.stdout | int - df1.stdout | int }}' to {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
+    section: lokole
+    option: lokole_disk_usage
+    value: "{{ df2.stdout | int - df1.stdout | int }}"
 
 - name: "Set 'lokole_installed: True'"
   set_fact:

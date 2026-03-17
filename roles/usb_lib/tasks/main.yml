@@ -1,7 +1,7 @@
 # TO DO: (2020-02-13)
 # - Look at analogous NGINX logic for http://box/usb in
 #   nginx/templates/iiab.conf.j2 and make that visually meaningful for teachers:
-# https://github.com/iiab/iiab/blob/master/roles/nginx/templates/iiab.conf.j2#L5-L8
+# https://github.com/iiab/iiab/blob/master/roles/nginx/templates/iiab.conf.j2#L5-L9
 
 
 # "How do i fail a task in Ansible if the variable contains a boolean value?
@@ -32,12 +32,12 @@
 
 # If setup.yml becomes the norm in future, put the 2-3 stanzas below in there:
 
-- name: "Set 'umask=0000' for {VFAT/FAT32, NTFS, exFAT} using var FS_MOUNTOPTIONS in /etc/usbmount/usbmount.conf, so Kolibri exports work"
+- name: "Set 'umask=0000' for {VFAT/FAT32, NTFS, exFAT} using var FS_MOUNTOPTIONS in /etc/usbmount/usbmount.conf -- for Kolibri exports AND student uploads to teacher's USB stick (using http://box/usb)"
   lineinfile:
     regexp: '^FS_MOUNTOPTIONS=.*'
     line: 'FS_MOUNTOPTIONS="-fstype=vfat,umask=0000 -fstype=ntfs,umask=0000 -fstype=exfat,umask=0000"'
     path: /etc/usbmount/usbmount.conf
-  when: usb_lib_umask0000_for_kolibri
+  when: usb_lib_writable_sticks
 
 # Setting 'umask=0000' for all filesystems: (much the same thing as above, as
 # the mount command does not use this umask setting for filesystems like ext4)
@@ -46,30 +46,26 @@
 #    regexp: '^MOUNTOPTIONS=.*'
 #    line: 'MOUNTOPTIONS="sync,noexec,nodev,noatime,nodiratime,umask=0000"'
 #    path: /etc/usbmount/usbmount.conf
-#  when: usb_lib_umask0000_for_kolibri
+#  when: usb_lib_writable_sticks
 
-- name: 'Set FS_MOUNTOPTIONS="" in /etc/usbmount/usbmount.conf, e.g. if Kolibri will not be used'
+- name: 'Set FS_MOUNTOPTIONS="" in /etc/usbmount/usbmount.conf -- e.g. if Kolibri exports AND student uploads to teacher USB stick are not needed'
   lineinfile:
     regexp: '^FS_MOUNTOPTIONS=.*'
     line: 'FS_MOUNTOPTIONS=""'    # Restore apt pkg default, e.g. for runrole
     path: /etc/usbmount/usbmount.conf
-  when: not usb_lib_umask0000_for_kolibri
+  when: not usb_lib_writable_sticks
 
 
-- name: Enable/Disable/Restart Apache if primary
-  include_tasks: apache.yml
-  when: not nginx_enabled
-
-- name: Enable/Disable/Restart NGINX if primary
+- name: Enable/Disable/Restart NGINX
   include_tasks: nginx.yml
-  when: nginx_enabled
 
 
-- name: Put variable in iiab.env that enables display of content at root of USB
-  lineinfile:
-    path: "{{ iiab_env_file }}"
-    regexp: "^IIAB_USB_LIB_SHOW_ALL.*"
-    line: "IIAB_USB_LIB_SHOW_ALL={{ iiab_usb_lib_show_all }}"
+# 2021-04-29: Clean up here to catch the already installed users, remove for the next release (PR #2760)
+- name: Remove /etc/usbmount/mount.d/00_create_model_symlink
+  file:
+    path: /etc/usbmount/mount.d/00_create_model_symlink
+    state: absent
+
 
 - name: Add 'usb_lib' variable values to {{ iiab_ini_file }}
   ini_file:
@@ -81,10 +77,10 @@
     - option: name
       value: USB_LIB
     - option: description
-      value: '"USB_LIB automounts Teacher Content on USB drives to /library/www/html/local_content, so students can browse it almost immediately at http://box/usb"'
+      value: '"USB_LIB (1) automounts teacher content on USB sticks to /library/www/html/local_content, so students can browse the USB; AND (2) allows students to upload their work to USB sticks / drives, all from http://box/usb"'
     - option: usb_lib_install
       value: "{{ usb_lib_install }}"
     - option: usb_lib_enabled
       value: "{{ usb_lib_enabled }}"
-    - option: usb_lib_umask0000_for_kolibri
-      value: "{{ usb_lib_umask0000_for_kolibri }}"
+    - option: usb_lib_writable_sticks
+      value: "{{ usb_lib_writable_sticks }}"

@@ -5,9 +5,9 @@
 
 - name: If not, install /usr/libexec/iiab-startup.sh from template
   template:
-    src: iiab-startup.sh
-    dest: /usr/libexec/
-    mode: 0755
+    src: iiab-startup.sh.j2
+    dest: /usr/libexec/iiab-startup.sh
+    mode: "0755"
   when: not startup_script.stat.exists
 
 - name: Install {{ systemd_location }}/iiab-startup.service from template

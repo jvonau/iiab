@@ -9,10 +9,11 @@
   include_role:
     name: nodejs
 
-- name: FAIL (STOP INSTALLING) IF nodejs_version is not set to 10.x, 12.x or 14.x
-  fail:
-    msg: "Internet Archive install cannot proceed, as it currently requires Node.js 10.x or 12.x or 14.x, and your nodejs_version is set to {{ nodejs_version }}.  Please check the value of nodejs_version in /opt/iiab/iiab/vars/default_vars.yml and possibly also /etc/iiab/local_vars.yml"
-  when: (nodejs_version != "10.x") and (nodejs_version != "12.x") and (nodejs_version != "14.x")
+- name: Assert that 10.x <= nodejs_version ({{ nodejs_version }})
+  assert:
+    that: nodejs_version is version('10.x', '>=')
+    fail_msg: "Internet Archive install cannot proceed, as it currently requires Node.js 10+, and your nodejs_version is set to {{ nodejs_version }}.  Please check the value of nodejs_version in /opt/iiab/iiab/vars/default_vars.yml and possibly also /etc/iiab/local_vars.yml"
+    quiet: yes
 
 - name: "Set 'yarn_install: True' and 'yarn_enabled: True'"
   set_fact:
@@ -29,6 +30,11 @@
     state: present
 
 
+- name: Record (initial) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df1
+
+
 # 2. CREATE 2 DIRS, WIPE /opt/iiab/internetarchive/node_modules & RUN YARN
 
 - name: mkdir {{ internetarchive_dir }}
@@ -36,17 +42,16 @@
     state: directory
     path: "{{ internetarchive_dir }}"    # /opt/iiab/internetarchive
 
-- name: Wipe dir {{ internetarchive_dir }}/node_modules (and its contents, typically 112+ MB) so './runrole --reinstall internetarchive' gets you the latest code
+- name: Wipe dir {{ internetarchive_dir }}/node_modules (can be ~126+ MB) so './runrole --reinstall internetarchive' gets you the latest code
   file:
     state: absent
     path: "{{ internetarchive_dir }}/node_modules"
 
-- name: Run 'yarn add @internetarchive/dweb-mirror' to download/populate {{ internetarchive_dir }}/node_modules (CAN TAKE ~5 MINUTES)
-  shell: yarn config set child-concurrency 1 && yarn add @internetarchive/dweb-mirror
+- name: Run 'yarn add https://github.com/internetarchive/dweb-mirror' to download/populate {{ internetarchive_dir }}/node_modules (CAN TAKE ~5 MINUTES)
+  shell: yarn config set child-concurrency 1 && yarn add https://github.com/internetarchive/dweb-mirror
   args:
     chdir: "{{ internetarchive_dir }}"
     creates: "{{ internetarchive_dir }}/node_modules/@internetarchive/dweb-mirror/internetarchive"
-  when: internet_available
 
 - name: mkdir {{ content_base }}/archiveorg
   file:
@@ -61,14 +66,19 @@
     src: internetarchive.service.j2
     dest: /etc/systemd/system/internetarchive.service
 
-- name: "Install from template: /etc/{{ apache_conf_dir }}/internetarchive.conf"
-  template:
-    src: internetarchive.conf
-    dest: "/etc/{{ apache_conf_dir }}/internetarchive.conf"    # apache2/sites-available
-  when: apache_installed is defined
-
 
 # 4. RECORD Internet Archive AS INSTALLED
+
+- name: Record (final) disk space used
+  shell: df -B1 --output=used / | tail -1
+  register: df2
+
+- name: Add 'internetarchive_disk_usage = {{ df2.stdout | int - df1.stdout | int }}' to {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
+    section: internetarchive
+    option: internetarchive_disk_usage
+    value: "{{ df2.stdout | int - df1.stdout | int }}"
 
 - name: "Set 'internetarchive_installed: True'"
   set_fact:

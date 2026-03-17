@@ -1,17 +1,17 @@
 - name: No LAN configured - 'Appliance' mode
   set_fact:
-    dansguardian_enabled: False
+    # dansguardian_enabled: False
     squid_enabled: False
-    wondershaper_enabled: False
+    # wondershaper_enabled: False
     hostapd_enabled: False
     iiab_network_mode: "Appliance"
   when: iiab_lan_iface == "none" or user_lan_iface == "none"
 
 - name: LAN configured - 'LanController' mode
   set_fact:
-    dansguardian_enabled: False
+    # dansguardian_enabled: False
     squid_enabled: False
-    wondershaper_enabled: False
+    # wondershaper_enabled: False
     iiab_network_mode: "LanController"
   when: iiab_lan_iface != "none" and iiab_wan_iface == "none"
 
@@ -20,66 +20,64 @@
     iiab_network_mode: "Gateway"
   when: iiab_lan_iface != "none" and iiab_wan_iface != "none"
 
-- name: No LAN configured - non-dnsmasq
-  set_fact:
-    named_enabled: True
-    dhcpd_enabled: False
-    dhcp_service2: "dhcpd disabled"
-  when: not dnsmasq_enabled and iiab_network_mode == "Appliance"
+#- name: No LAN configured - non-dnsmasq
+#  set_fact:
+#    named_enabled: True
+#    dhcpd_enabled: False
+#    dhcp_service2: "dhcpd disabled"
+#  when: not dnsmasq_enabled and iiab_network_mode == "Appliance"
 
-- name: LAN configured - non-dnsmasq
-  set_fact:
-    named_enabled: True
-    dhcpd_enabled: True
-    dhcp_service2: "dhcpd"
-  when: not dnsmasq_enabled and iiab_network_mode != "Appliance"
+#- name: LAN configured - non-dnsmasq
+#  set_fact:
+#    named_enabled: True
+#    dhcpd_enabled: True
+#    dhcp_service2: "dhcpd"
+#  when: not dnsmasq_enabled and iiab_network_mode != "Appliance"
 
-- name: LAN configured - dnsmasq
-  set_fact:
-    named_enabled: False
-    dhcpd_enabled: False
-    dnsmasq_enabled: True
-    dhcp_service2: "dnsmasq"
-  when: dnsmasq_install and iiab_network_mode != "Appliance"
+#- name: LAN configured - dnsmasq
+#  set_fact:
+#    named_enabled: False
+#    dhcpd_enabled: False
+#    dnsmasq_enabled: True
+#    dhcp_service2: "dnsmasq"
+#  when: dnsmasq_install and iiab_network_mode != "Appliance"
 
-- name: LAN not configured - dnsmasq
-  set_fact:
-    named_enabled: False
-    dhcpd_enabled: False
-    dnsmasq_enabled: True
-    dhcp_service2: "dnsmasq"
-  when: dnsmasq_install and iiab_network_mode == "Appliance"
+#- name: LAN not configured - dnsmasq
+#  set_fact:
+#    named_enabled: False
+#    dhcpd_enabled: False
+#    dnsmasq_enabled: True
+#    dhcp_service2: "dnsmasq"
+#  when: dnsmasq_install and iiab_network_mode == "Appliance"
 
 - name: Add 'network' variable values (from computed_services.yml) to {{ iiab_ini_file }}
   ini_file:
-    dest: "{{ iiab_ini_file }}"
+    dest: "{{ iiab_ini_file }}"    # /etc/iiab/iiab.ini
     section: network
     option: "{{ item.option }}"
     value: "{{ item.value | string }}"
   with_items:
-  - option: dansguardian_enabled
-    value: "{{ dansguardian_enabled }}"
-  - option: squid_enabled
-    value: "{{ squid_enabled }}"
-  - option: wondershaper_enabled
-    value: "{{ wondershaper_enabled }}"
-  - option: iiab_network_mode_applied
-    value: "{{ iiab_network_mode }}"
-  - option: dhcpd_enabled
-    value: "{{ dhcpd_enabled }}"
-  - option: dhcp_service2
-    value: "{{ dhcp_service2 }}"
-  - option: named_enabled
-    value: "{{ named_enabled }}"
-  - option: dnsmasq_enabled
-    value: "{{ dnsmasq_enabled }}"
-  - option: no_net_restart
-    value: "{{ no_net_restart }}"
-  - option: hostapd_enabled
-    value: "{{ hostapd_enabled }}"
-  - option: host_ssid
-    value: "{{ host_ssid }}"
-  - option: host_wifi_mode
-    value: "{{ host_wifi_mode }}"
-  - option: host_channel
-    value: "{{ host_channel }}"
+    #- option: squid_install
+    #  value: "{{ squid_install }}"
+    #- option: squid_enabled
+    #  value: "{{ squid_enabled }}"
+    #- option: dansguardian_install
+    #  value: "{{ dansguardian_install }}"
+    #- option: dansguardian_enabled
+    #  value: "{{ dansguardian_enabled }}"
+    #- option: wondershaper_install
+    #  value: "{{ wondershaper_install }}"
+    #- option: wondershaper_enabled
+    #  value: "{{ wondershaper_enabled }}"
+    - option: iiab_network_mode_applied
+      value: "{{ iiab_network_mode }}"
+#    - option: dhcpd_enabled
+#      value: "{{ dhcpd_enabled }}"
+#    - option: dhcp_service2
+#      value: "{{ dhcp_service2 }}"
+#    - option: named_enabled
+#      value: "{{ named_enabled }}"
+    - option: dnsmasq_enabled
+      value: "{{ dnsmasq_enabled }}"
+    - option: no_net_restart
+      value: "{{ no_net_restart }}"
