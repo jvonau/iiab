@@ -6,6 +6,7 @@ on:
       - "[0-9]+.*"
     branches:
       - master
+      - main
     paths-ignore:
       - '**/*.md'
       - '**/*.rst'
@@ -66,7 +67,7 @@ jobs:
 
       - name: Download RaspberryPi OS
         working-directory: nspawn-loop
-        run: sudo ./mount.sh https://downloads.raspberrypi.org/raspios_lite_arm64_latest 12000
+        run: sudo ./mount.sh https://downloads.raspberrypi.org/raspios_arm64_latest 12000
 
       - name: Build image
         working-directory: nspawn-loop
@@ -130,6 +131,8 @@ jobs:
           spawn systemd-nspawn -q --network-veth --resolv-conf=off -D $env(MOUNT_DIR) -M box --boot
           expect "login: " { send "root\r" }
 
+          expect -re {#\s?$} { send "apt -y remove libcamera*\r" }
+          expect -re {#\s?$} { send "apt -y autoremove\r" }
           expect -re {#\s?$} { send "apt update\r" }
           expect -re {#\s?$} { send "mkdir -p /etc/initramfs-tools/conf.d && echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf\r" }
           expect -re {#\s?$} { send "DEBIAN_FRONTEND=noninteractive apt -y full-upgrade\r" }
