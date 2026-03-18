@@ -166,7 +166,7 @@ jobs:
           source "$STATE_FILE"
 
           diff \
-            <(sort ../iiab/.github/workflows/tests/expected_state_medium_image.yml) \
+            <(sort ../iiab/.github/workflows/tests/expected_state_small_image.yml) \
             <(sort "$MOUNT_DIR/etc/iiab/iiab_state.yml")
 
           EOF
