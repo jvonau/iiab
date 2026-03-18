@@ -1,11 +1,11 @@
-name: '"20 min" SMALL IMAGE on latest RPiOS Lite'
+name: '"20 min" MEDIUM IMAGE on latest RPiOS Lite'
 
 on:
   push:
-    tags:
-      - "[0-9]+.*"
-    branches:
-      - master
+    #tags:
+    #  - "[0-9]+.*"
+    #branches:
+    #  - master
     paths-ignore:
       - '**/*.md'
       - '**/*.rst'
@@ -100,7 +100,7 @@ jobs:
           cp -R --preserve=mode,timestamps,links ../iiab "$MOUNT_DIR/opt/iiab/"
 
           mkdir -p "$MOUNT_DIR/etc/iiab"
-          cp --preserve=mode,timestamps ../iiab/vars/local_vars_small.yml "$MOUNT_DIR/etc/iiab/local_vars.yml"
+          cp --preserve=mode,timestamps ../iiab/vars/local_vars_medium.yml "$MOUNT_DIR/etc/iiab/local_vars.yml"
 
           echo "rpi_image: True" >> "$MOUNT_DIR/etc/iiab/local_vars.yml"
           sed -i "s/^iiab_admin_user_install: True/iiab_admin_user_install: False/" "$MOUNT_DIR/etc/iiab/local_vars.yml"
@@ -135,6 +135,7 @@ jobs:
           expect -re {#\s?$} { send "export DEBIAN_FRONTEND=noninteractive\r" }
           expect -re {#\s?$} { send "apt -y remove libcamera*\r" }
           expect -re {#\s?$} { send "apt -y full-upgrade\r" }
+          expect -re {#\s?$} { send "apt -y autoremove\r" }
 
           expect -re {#\s?$} { send "curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab\r" }
           expect -re {#\s?$} { send "chmod 0755 /usr/sbin/iiab\r" }
