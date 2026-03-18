@@ -1,4 +1,4 @@
-name: '"15 min" TINY IMAGE on latest RPiOS Lite'
+name: '"15 min" TINY IMAGE on latest RPiOS Desktop'
 
 on:
   push:
@@ -66,7 +66,7 @@ jobs:
 
       - name: Download RaspberryPi OS
         working-directory: nspawn-loop
-        run: sudo ./mount.sh https://downloads.raspberrypi.org/raspios_lite_arm64_latest 7450
+        run: sudo ./mount.sh https://downloads.raspberrypi.org/raspios_arm64_latest 15000
 
       - name: Build image
         working-directory: nspawn-loop
