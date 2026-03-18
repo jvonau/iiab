@@ -1,11 +1,18 @@
-name: '"20 min" TINY IMAGE on latest RPiOS Desktop'
+name: '"20 min" UNITTEST IMAGE on latest RPiOS Desktop'
 
 on:
   push:
-    #tags:
-    #  - "[0-9]+.*"
-    #branches:
-    #  - master
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.rst'
+      - '**/*.html'
+      - '**/*.css'
+      - '**/*.svg'
+      - '**/*.jpg'
+      - '**/*.png'
+      - '**/*.php'
+      - '**/*.js'
+  pull_request:  # needed to show up in Pull Request UI
     paths-ignore:
       - '**/*.md'
       - '**/*.rst'
@@ -39,28 +46,13 @@ jobs:
       - name: Set release name
         id: release_name
         run: |
+          DATE=$(date +'%y%m%d')
           HASH=$(git -C iiab rev-parse --short=7 HEAD)
-          # Use commit timestamp for true idempotency (same commit = same tag)
-          COMMIT_DATETIME_LOCAL=$(git -C iiab log -1 --format=%cd --date=iso-strict)
-          # Convert the local time to UTC using the 'date' command
-          COMMIT_DATETIME_UTC=$(date -d "$COMMIT_DATETIME_LOCAL" -u +"%Y-%m-%dT%H:%M:%SZ")
-          # Extract date and time components from the UTC timestamp
-          COMMIT_DATE=$(date -d "$COMMIT_DATETIME_UTC" +'%y%m%d')
-          COMMIT_TIME=$(date -d "$COMMIT_DATETIME_UTC" +'%H%M')
-          TAG_NAME="${{ github.ref_name }}"
-          TAG_NAME="${TAG_NAME%/*}"
-          # Extract PR number from merge commit message (format: "Merge pull request #1234")
-          PR_NUM=$(git -C iiab log -1 --pretty=%B | grep -oP 'Merge pull request #\K[0-9]+' || echo "")
-          PR_NUM="${PR_NUM%/*}"
+          TAG_NAME=${{ github.ref_name }}
           if [[ "$TAG_NAME" =~ ^[0-9] ]]; then
             RELEASE_NAME="$TAG_NAME"
-          elif [[ -n "$PR_NUM" ]]; then
-            # Use commit timestamp+PR for idempotent, chronologically sortable tags
-            # Format: daily-YYMMDD-HHMM-PR1234 (sorts alphabetically & chronologically)
-            RELEASE_NAME="daily-${COMMIT_DATE}-${COMMIT_TIME}-PR${PR_NUM}"
           else
-            # Fallback to hash for non-PR commits
-            RELEASE_NAME="daily-${COMMIT_DATE}-${COMMIT_TIME}-${HASH}"
+            RELEASE_NAME="daily-${DATE}-${HASH}"
           fi
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
 
@@ -79,32 +71,25 @@ jobs:
 
           VERSION=$(grep '^iiab_base_ver:' ../iiab/vars/default_vars.yml | awk '{print $2}')
           echo "IIAB_BASE_VERSION=$VERSION" >> $GITHUB_ENV
-          OS="rpios"
-          EDITION="tiny"
+          DATE=$(date +'%y%m%d')
+          OS="raspios"
+          EDITION="unittest"
           HASH=$(git -C ../iiab rev-parse --short=7 HEAD)
-          COMMIT_DATE=$(git -C ../iiab log -1 --format=%cd --date=format:'%y%m%d')
-          PR_NUM=$(git -C ../iiab log -1 --pretty=%B | grep -oP 'Merge pull request #\K[0-9]+' || echo "")
-          PR_NUM="${PR_NUM%/*}"
-          TAG_NAME="${{ github.ref_name }}"
-          TAG_NAME="${TAG_NAME%/*}"
-          if [[ "$TAG_NAME" =~ ^[0-9] ]]; then
-            IMG_NAME="iiab-desktop-$VERSION-$OS-$EDITION-$TAG_NAME"
-          elif [[ -n "$PR_NUM" ]]; then
-            IMG_NAME="iiab-desktop-$VERSION-$OS-$EDITION-${COMMIT_DATE}-PR${PR_NUM}"
-          else
-            IMG_NAME="iiab-desktop-$VERSION-$OS-$EDITION-${COMMIT_DATE}-${HASH}"
-          fi
+          IMG_NAME="iiab-desktop-$VERSION-$DATE-$OS-$EDITION-$HASH"
           echo "IMG_NAME=$IMG_NAME" >> $GITHUB_ENV
 
           mkdir -p "$MOUNT_DIR/opt/iiab"
           cp -R --preserve=mode,timestamps,links ../iiab "$MOUNT_DIR/opt/iiab/"
 
           mkdir -p "$MOUNT_DIR/etc/iiab"
-          cp --preserve=mode,timestamps ../iiab/vars/local_vars_tiny.yml "$MOUNT_DIR/etc/iiab/local_vars.yml"
+          cp --preserve=mode,timestamps ../iiab/vars/local_vars_unittest.yml "$MOUNT_DIR/etc/iiab/local_vars.yml"
 
           echo "rpi_image: True" >> "$MOUNT_DIR/etc/iiab/local_vars.yml"
           sed -i "s/^iiab_admin_user_install: True/iiab_admin_user_install: False/" "$MOUNT_DIR/etc/iiab/local_vars.yml"
 
+          if ! command -v expect &>/dev/null; then
+              apt-get update && apt-get install -y expect
+          fi
           if ! command -v systemd-nspawn &> /dev/null; then
               apt-get update && apt-get install -y systemd-container
           fi
@@ -112,50 +97,41 @@ jobs:
           systemctl is-active --quiet systemd-networkd || systemctl start systemd-networkd
           systemctl is-active --quiet systemd-resolved || systemctl start systemd-resolved
 
-          # based on https://github.com/jvonau/mk-image/blob/main/mkarm-image.sh
-          mount --bind /dev "${MOUNT_DIR}"/dev
-          mount -t proc none "${MOUNT_DIR}"/proc
-          mount -t sysfs none "${MOUNT_DIR}"/sys
-          mount -t devpts none "${MOUNT_DIR}"/dev/pts
-          mount -t tmpfs tmpfs "${MOUNT_DIR}"/tmp
-          mount -t tmpfs tmpfs "${MOUNT_DIR}"/run
-          mkdir -p "${MOUNT_DIR}"/run/lock
+          # Explicitly allow forwarding for systemd-nspawn virtual interfaces
+          sysctl -w net.ipv4.ip_forward=1
+          EXT_IF=$(ip route | grep default | awk '{print $5}' | head -n1)
+          iptables -t nat -A POSTROUTING -o "$EXT_IF" -j MASQUERADE
+          iptables -A FORWARD -i ve-+ -o "$EXT_IF" -j ACCEPT
+          iptables -A FORWARD -i "$EXT_IF" -o ve-+ -m state --state RELATED,ESTABLISHED -j ACCEPT
 
-          sed 's/^          //' << 'EOF_CHROOT' > "$MOUNT_DIR/root/builder.sh"
-          #!/bin/bash
-          set -euo pipefail
+          systemd-firstboot --root="$MOUNT_DIR" --delete-root-password --force
+          export MOUNT_DIR
+          sed 's/^          //' << 'EXPECT_EOF' | expect
+          set timeout 7200
 
-          export DEBIAN_FRONTEND=noninteractive
+          spawn systemd-nspawn -q --network-veth --resolv-conf=off -D $env(MOUNT_DIR) -M box --boot
+          expect "login: " { send "root\r" }
 
-          apt update
-          mkdir -p /etc/initramfs-tools/conf.d
-          echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf
-          apt -y remove libcamera*
-          apt -y full-upgrade
-          apt -y autoremove
+          expect -re {#\s?$} { send "apt update\r" }
+          expect -re {#\s?$} { send "mkdir -p /etc/initramfs-tools/conf.d && echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf\r" }
+          expect -re {#\s?$} { send "DEBIAN_FRONTEND=noninteractive apt -y full-upgrade\r" }
 
-          apt install curl
-          curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab
-          chmod 0755 /usr/sbin/iiab
+          expect -re {#\s?$} { send "curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab\r" }
+          expect -re {#\s?$} { send "chmod 0755 /usr/sbin/iiab\r" }
+          expect -re {#\s?$} { send "/usr/sbin/iiab --risky\r" }
+          expect {
+              timeout { puts "\nTimed out waiting for final confirmation prompt"; exit 1 }
+              "photographed" { send "\r" }
+              "root@raspberrypi" { puts "\nAnsible quit before photograph. Exiting with failure."; exit 1 }
+          }
+          # forced reboot
+          expect "login: " { send "root\r" }
 
-          echo "box" > /etc/hostname
-          /usr/sbin/iiab --risky
+          expect -re {#\s?$} { send "usermod --lock --expiredate=1 root\r" }
 
-          EOF_CHROOT
-
-          chmod 0755 $MOUNT_DIR/root/builder.sh
-          echo "Entering CHROOT"
-          chroot $MOUNT_DIR /root/builder.sh
-          echo "Leaving CHROOT"
-
-          fuser -vk -m "${MOUNT_DIR}" || true
-
-          umount "${MOUNT_DIR}"/run
-          umount "${MOUNT_DIR}"/tmp
-          umount "${MOUNT_DIR}"/dev/pts
-          umount "${MOUNT_DIR}"/dev
-          umount "${MOUNT_DIR}"/sys
-          umount "${MOUNT_DIR}"/proc
+          expect -re {#\s?$} { send "shutdown now\r" }
+          expect eof
+          EXPECT_EOF
 
           EOF
 
@@ -169,7 +145,7 @@ jobs:
           source "$STATE_FILE"
 
           diff \
-            <(sort ../iiab/.github/workflows/tests/expected_state_tiny_image.yml) \
+            <(sort ../iiab/.github/workflows/tests/expected_state_unittest_image.yml) \
             <(sort "$MOUNT_DIR/etc/iiab/iiab_state.yml")
 
           EOF
@@ -201,21 +177,20 @@ jobs:
           echo uninitialized > "$MOUNT_DIR/etc/machine-id"
           rm -f "$MOUNT_DIR/etc/iiab/uuid"
           rm -f "$MOUNT_DIR/var/swap"
-          rm -f "$MOUNT_DIR/root/builder.sh"
-          rm -fr "$MOUNT_DIR/home/runner"
+          touch "$MOUNT_DIR/.resize-rootfs"
 
           ./shrink.sh "$STATE_FILE" 1800
 
           mv "$IMG_FILE" "${IMG_NAME}.img"
 
-          # Compress image with zstd
-          zstd --long=27 -T0 -16 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.zst"
+          # Compress image with xz
+          xz -v -9 -T0 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.xz"
           EOF
 
       - name: Generate rpi-imager manifest
         working-directory: nspawn-loop
         env:
-          EDITION: tiny
+          EDITION: unittest
         run: |
           cat << 'EOF' > gen_manifest.py
           import json
@@ -325,8 +300,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          #gh release create ${{ env.RELEASE_NAME }} --target ${{ github.sha }} --fail-on-no-commits \
-          gh release create ${{ env.RELEASE_NAME }} --target ${{ github.sha }} \
+          gh release create ${{ env.RELEASE_NAME }} \
             --title "IIAB Daily Build ${{ env.RELEASE_NAME }}" \
             --generate-notes \
             --prerelease \
@@ -346,27 +320,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cat << 'EOF' > old_dailies.py
-          import sys, json
-          from datetime import datetime, timedelta, timezone
+          # Delete daily releases older than 7 days
+          THRESHOLD=$(date -d "7 days ago" +%s)
 
-          data = json.load(sys.stdin)
-          for r in data:
-              r['dt'] = datetime.fromisoformat(r['createdAt'].replace('Z', '+00:00'))
-
-          filtered = sorted(
-              [r for r in data if r.get('tagName', '').startswith('daily-') and r.get('isPrerelease')],
-              key=lambda x: x['dt'],
-              reverse=True
-          )
-
-          cutoff = datetime.now(timezone.utc) - timedelta(days=10)
-          for r in filtered[10:]:
-              if r['dt'] < cutoff:
-                  print(r['tagName'])
-          EOF
-
-          gh release list --repo ${{ github.repository }} --json tagName,isPrerelease,createdAt --limit 100 | python3 old_dailies.py | while read -r tag; do
-            echo "Deleting: $tag"
-            gh release delete "$tag" --repo ${{ github.repository }} --yes --cleanup-tag || true
+          gh release list --repo ${{ github.repository }} --json name,tagName,isDraft,isPrerelease,createdAt | \
+          jq -r '.[] | select(.name | startswith("daily-")) | "\(.name)\t\(.createdAt)"' | \
+          while IFS=$'\t' read -r release_name created_at; do
+            release_timestamp=$(date -d "$created_at" +%s)
+            if [[ $release_timestamp -lt $THRESHOLD ]]; then
+              echo "Deleting old daily release: $release_name"
+              gh release delete "$release_name" --repo ${{ github.repository }} --yes --cleanup-tag || true
+            fi
           done
