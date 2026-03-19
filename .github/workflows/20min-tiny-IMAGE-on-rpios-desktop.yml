@@ -211,6 +211,8 @@ jobs:
           # Compress image with zstd
           #zstd --long=27 -T0 -16 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.zst"
           xz -v -9 -T0 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.xz"
+          echo "size"
+          ls -la "${IMG_NAME}.img.xz"
           EOF
 
       - name: Generate rpi-imager manifest
