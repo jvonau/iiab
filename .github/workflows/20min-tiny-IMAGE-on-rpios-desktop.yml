@@ -209,7 +209,8 @@ jobs:
           mv "$IMG_FILE" "${IMG_NAME}.img"
 
           # Compress image with zstd
-          zstd --long=27 -T0 -16 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.zst"
+          #zstd --long=27 -T0 -16 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.zst"
+          xz -v -9 -T0 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.xz"
           EOF
 
       - name: Generate rpi-imager manifest
@@ -229,7 +230,7 @@ jobs:
               print("Error: IMG_NAME not set")
               sys.exit(1)
 
-          zst_name = f"{img_name}.img.zst"
+          zst_name = f"{img_name}.img.xz"
           if not os.path.exists(zst_name):
               print(f"Error: {zst_name} not found")
               sys.exit(1)
@@ -337,7 +338,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload ${{ env.RELEASE_NAME }} \
-            nspawn-loop/${{ env.IMG_NAME }}.img.zst \
+            nspawn-loop/${{ env.IMG_NAME }}.img.xz \
             nspawn-loop/${{ env.IMG_NAME }}.rpi-imager-manifest \
             --repo ${{ github.repository }}
 
