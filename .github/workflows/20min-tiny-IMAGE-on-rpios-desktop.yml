@@ -2,10 +2,10 @@ name: '"20 min" TINY IMAGE on latest RPiOS Desktop'
 
 on:
   push:
-    tags:
-      - "[0-9]+.*"
-    branches:
-      - master
+    #tags:
+    #  - "[0-9]+.*"
+    #branches:
+    #  - master
     paths-ignore:
       - '**/*.md'
       - '**/*.rst'
@@ -132,6 +132,7 @@ jobs:
           echo 'MODULES=most' > /etc/initramfs-tools/conf.d/nspawn.conf
           apt -y remove libcamera*
           apt -y full-upgrade
+          apt -y autoremove
 
           apt install curl
           curl -fLo /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab
@@ -209,6 +210,10 @@ jobs:
 
           # Compress image with zstd
           zstd --long=27 -T0 -16 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.zst"
+
+          echo "compresed size"
+          ls -la "${IMG_NAME}.img.zst"
+
           EOF
 
       - name: Generate rpi-imager manifest
