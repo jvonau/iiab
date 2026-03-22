@@ -2,10 +2,10 @@ name: '"25 min" SMALL IMAGE on latest RPiOS Desktop'
 
 on:
   push:
-    tags:
-      - "[0-9]+.*"
-    branches:
-      - master
+    #tags:
+    #  - "[0-9]+.*"
+    #branches:
+    #  - master
     paths-ignore:
       - '**/*.md'
       - '**/*.rst'
