@@ -66,7 +66,7 @@ jobs:
 
       - name: Download RaspberryPi OS
         working-directory: nspawn-loop
-        run: sudo ./mount.sh https://downloads.raspberrypi.org/raspios_arm64_latest 15000
+        run: sudo ./mount.sh https://downloads.raspberrypi.org/raspios_arm64_latest 12000
 
       - name: Build image
         working-directory: nspawn-loop
@@ -330,7 +330,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create ${{ env.RELEASE_NAME }} --target ${{ github.sha }} --fail-on-no-commits \
+          #gh release create ${{ env.RELEASE_NAME }} --target ${{ github.sha }} --fail-on-no-commits \
+          gh release create ${{ env.RELEASE_NAME }} --target ${{ github.sha }} \
             --title "IIAB Daily Build ${{ env.RELEASE_NAME }}" \
             --generate-notes \
             --prerelease \
