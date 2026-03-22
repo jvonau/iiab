@@ -209,7 +209,7 @@ jobs:
           mv "$IMG_FILE" "${IMG_NAME}.img"
 
           # Compress image with zstd
-          zstd --long=27 -T0 -16 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.zst"
+          zstd --long=27 -T0 -18 --stdout "${IMG_NAME}.img" > "${IMG_NAME}.img.zst"
 
           echo "compresed size"
           ls -la "${IMG_NAME}.img.zst"
