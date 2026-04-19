@@ -40,10 +40,19 @@
     name: dhcpcd
     state: restarted
 
+# covers auto
 - name: Restart networking.service if dhcpcd process is detected
   when: ansible_facts.ansible_local.local_facts.dhcpcd == "process"
   systemd:
     name: networking
+    state: restarted
+
+# covers allow-hotplug won't be present if auto is used so ignore errors on restart
+- name: Restart ifup@{{ ansible_facts.default_ipv4.alias }}.service if dhcpcd process is detected
+  ignore_errors: yes
+  when: ansible_facts.ansible_local.local_facts.dhcpcd == "process"
+  systemd:
+    name: ifup@{{ ansible_facts.default_ipv4.alias }}.service
     state: restarted
 
 - name: Install dnsmasq -- configure LATER in 'network', after Stage 9
