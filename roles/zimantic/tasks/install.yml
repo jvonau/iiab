@@ -29,6 +29,28 @@
       owner: root
       group: root
 
+# Checking first keeps offline reruns from touching the network: apt would
+# otherwise run 'apt-get update' on every run, even when nothing is missing.
+- name: Check which Zimantic system packages are missing
+  command: "dpkg-query -W -f='${db:Status-Status}' {{ item }}"
+  register: zimantic_system_package_status
+  changed_when: false
+  failed_when: false
+  loop: "{{ zimantic_system_packages }}"
+  when: zimantic_system_packages_enabled | bool
+
+- name: Install native dependencies from the distribution
+  apt:
+    name: "{{ zimantic_system_packages }}"
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+  when:
+    - zimantic_system_packages_enabled | bool
+    - zimantic_system_package_status.results | default([]) |
+      rejectattr('stdout', 'equalto', 'installed') | list | length > 0
+
+
 - name: Create Zimantic Python virtual environment
   command:
     cmd: "{{ zimantic_python }} -m venv {{ '--system-site-packages ' if (zimantic_system_packages_enabled | bool) else '' }}{{ zimantic_venv }}"
@@ -76,6 +98,70 @@
     cmd: "{{ zimantic_venv }}/bin/python -m pip install --disable-pip-version-check --no-cache-dir --no-build-isolation --upgrade --force-reinstall {{ '--no-deps ' if ((zimantic_system_packages_enabled | bool) or (not upgrade and not force_reinstall and (reinstall or ((zimantic_installed_version | default('')) == zimantic_version and zimantic_source_matches_version)))) else '' }}{{ zimantic_source_dir }}"
   register: zimantic_pip_install
   changed_when: "'Successfully installed' in zimantic_pip_install.stdout"
+
+# Both tokenizers in one model directory would make Zimantic choose
+# SentencePiece, which is wrong for the English model.
+- name: Remove the tokenizer left by a different embedding model
+  file:
+    path: "{{ zimantic_model_dir }}/{{ zimantic_unused_tokenizer_file }}"
+    state: absent
+  register: zimantic_unused_tokenizer
+  when: zimantic_mode == 'semantic'
+
+- name: Download Zimantic embedding model
+  get_curl:
+    url: "{{ zimantic_selected_model_url }}"
+    dest: "{{ zimantic_model_dir }}/model.onnx"
+    checksum: "{{ zimantic_selected_model_checksum }}"
+    timeout: "{{ download_timeout }}"
+  register: zimantic_model_download
+  when: zimantic_mode == 'semantic'
+
+- name: Download Zimantic tokenizer
+  get_curl:
+    url: "{{ zimantic_selected_tokenizer_url }}"
+    dest: "{{ zimantic_model_dir }}/{{ zimantic_selected_tokenizer_file }}"
+    checksum: "{{ zimantic_selected_tokenizer_checksum }}"
+    timeout: "{{ download_timeout }}"
+  register: zimantic_tokenizer_download
+      when: zimantic_mode == 'semantic'
+
+- name: Check for the Zimantic embedding model
+  stat:
+    path: "{{ zimantic_model_dir }}/model.onnx"
+  register: zimantic_model_file
+  when: zimantic_mode == 'semantic'
+
+- name: Check for the Zimantic tokenizer
+  stat:
+    path: "{{ zimantic_model_dir }}/{{ zimantic_selected_tokenizer_file }}"
+  register: zimantic_tokenizer_file
+  when: zimantic_mode == 'semantic'
+
+- name: Fail if semantic mode has no embedding model
+  fail:
+    msg: "Semantic mode needs model.onnx and {{ zimantic_selected_tokenizer_file }} in {{ zimantic_model_dir }}; the download failed or the files were removed"
+  when:
+   - zimantic_mode == 'semantic'
+   - not zimantic_model_file.stat.exists or
+     not zimantic_tokenizer_file.stat.exists
+
+- name: Install Zimantic configuration
+  template:
+    src: config.toml.j2
+    dest: "{{ zimantic_config_file }}"
+    owner: "{{ zimantic_user }}"
+    group: "{{ zimantic_user }}"
+    mode: "0644"
+  register: zimantic_config_update
+
+- name: Install zimantic.service
+  template:
+    src: zimantic.service.j2
+    dest: /etc/systemd/system/zimantic.service
+    owner: root
+    group: root
+    mode: "0644"
 
 - name: Record (final) disk space used
   shell: df -B1 --output=used / | tail -1
