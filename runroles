@@ -159,10 +159,12 @@ if [ ! -f "$LOCAL_VARS_FILE" ]; then
 fi
 
 CHECK_STATE_FILE=""
+STATE_BACKUP_FILE=""
 cleanup_check_state() {
     if [ -n "$CHECK_STATE_FILE" ]; then
         rm -f "$CHECK_STATE_FILE"
     fi
+    cleanup_state_backup
 }
 trap cleanup_check_state EXIT
 
@@ -192,18 +194,18 @@ if ! command -v ansible > /dev/null; then
     exit 1
 fi
 
+PLAYBOOK_ROLES=("${ROLES[@]}")
 if $UNINSTALL; then
     echo -e "\e[1;31mWARNING: --uninstall removes the listed roles and may delete their data and settings.\e[0m"
     confirm_destructive || { echo "Cancelled."; exit 1; }
 
+    PLAYBOOK_ROLES=()
     found=false
     for role in "${ROLES[@]}"; do
         var=$(role_var "$role")
         if grep -q "^${var}_" "$IIAB_STATE_FILE"; then
             found=true
-            echo "Uninstalling $role. Deleting from $IIAB_STATE_FILE:"
-            grep "^${var}_" "$IIAB_STATE_FILE" | sed 's/^/  /'
-            sed -i "/^${var}_/d" "$IIAB_STATE_FILE"
+            PLAYBOOK_ROLES+=("$role")
         else
             echo "$role is not installed; nothing to uninstall."
         fi
@@ -215,6 +217,17 @@ if $UNINSTALL; then
         echo "Nothing to uninstall."
         exit 1
     fi
+    backup_state_file || exit 1
+    for role in "${PLAYBOOK_ROLES[@]}"; do
+        var=$(role_var "$role")
+        echo "Uninstalling $role. Deleting from $IIAB_STATE_FILE:"
+        grep "^${var}_" "$IIAB_STATE_FILE" | sed 's/^/  /'
+        if ! sed -i "/^${var}_/d" "$IIAB_STATE_FILE"; then
+            echo "ERROR: could not update $IIAB_STATE_FILE." >&2
+            restore_state_file
+            exit 1
+        fi
+    done
     echo "Set the listed roles' '*_install: False' in $LOCAL_VARS_FILE to keep them uninstalled."
     echo
 elif $REINSTALL; then
@@ -260,7 +273,7 @@ fi
 cp runroles-base.yml $PLAYBOOK
 
 # add desired roles from arguments
-for role in "${ROLES[@]}"; do
+for role in "${PLAYBOOK_ROLES[@]}"; do
     echo "    - { role: $role }" >> $PLAYBOOK
     if $ADD; then
         var=$(role_var "$role")
@@ -294,3 +307,8 @@ if $CHECK; then
 fi
 echo -e "\e[1mRunning:\e[0m\n\n$CMD\n"
 $CMD
+STATUS_CODE=$?
+if [ "$STATUS_CODE" -ne 0 ]; then
+    restore_state_file
+    exit "$STATUS_CODE"
+fi

@@ -32,16 +32,17 @@ role_tasks_dir() {
 
 # True if <role> implements <feature> (uninstall, upgrade, or force_reinstall).
 #
-# No manifest is required. A role is recognized when its task files contain a
-# dedicated tasks/<feature>.yml, include or import that file, or reference the
-# feature variable in a condition such as 'when: upgrade'. A meta/runrole.yml
-# can still opt in explicitly, for the rare role whose implementation is not
-# visible from its tasks, but most roles should not need one.
+# No manifest is required. A role is recognized when tasks/main.yml or
+# tasks/main.yaml includes the feature task file or references the feature
+# variable in a condition such as 'when: upgrade'. A meta/runrole.yml can still
+# opt in explicitly, for the rare role whose implementation is not visible
+# from its entrypoint.
 role_supports() {
     local role=$1
     local feature=$2
     local manifest
     local tasks_dir
+    local entrypoint
     manifest=$(role_manifest_file "$role")
     tasks_dir=$(role_tasks_dir "$role")
 
@@ -52,34 +53,33 @@ role_supports() {
     fi
 
     [ -d "$tasks_dir" ] || return 1
-
-    # Dedicated task file, e.g. tasks/uninstall.yml.
-    if [ -f "$tasks_dir/${feature}.yml" ] || [ -f "$tasks_dir/${feature}.yaml" ]; then
-        return 0
+    if [ -f "$tasks_dir/main.yml" ]; then
+        entrypoint="$tasks_dir/main.yml"
+    elif [ -f "$tasks_dir/main.yaml" ]; then
+        entrypoint="$tasks_dir/main.yaml"
+    else
+        return 1
     fi
 
-    # Include/import of a dedicated task file.
-    if grep -RqE "^[[:space:]]*(-[[:space:]]+)?(include_tasks|import_tasks):[[:space:]]*['\"]?([^'\"]*/)?${feature}(\.ya?ml)?['\"]?[[:space:]]*$" "$tasks_dir" 2>/dev/null; then
+    # Include/import of a dedicated task file from the role entrypoint.
+    if grep -Eq "^[[:space:]]*(-[[:space:]]+)?(include_tasks|import_tasks):[[:space:]]*['\"]?([^'\"]*/)?${feature}(\.ya?ml)?['\"]?[[:space:]]*$" "$entrypoint"; then
         return 0
     fi
 
     # Single-line conditions such as 'when: uninstall' or
     # 'when: reinstall or force_reinstall'.
-    if grep -RqE "^[[:space:]]*when:[^#]*[^[:alnum:]_-]${feature}([^[:alnum:]_-]|$)" "$tasks_dir" 2>/dev/null; then
+    if grep -Eq "^[[:space:]]*when:[^#]*[^[:alnum:]_-]${feature}([^[:alnum:]_-]|$)" "$entrypoint"; then
         return 0
     fi
 
     # List-style conditions, e.g. a '- uninstall' item below 'when:'.
-    if grep -RqE "^[[:space:]]*-[[:space:]]+(not[[:space:]]+)?${feature}[[:space:]]*(#.*)?$" "$tasks_dir" 2>/dev/null; then
+    if grep -Eq "^[[:space:]]*-[[:space:]]+(not[[:space:]]+)?${feature}[[:space:]]*(#.*)?$" "$entrypoint"; then
         return 0
     fi
 
-    # Multi-line conditions and Jinja expressions, where the variable sits on
-    # a line of its own (for example 'upgrade or' inside a '>-' block).
-    if grep -RqE "^[[:space:]]*${feature}([[:space:]]+(or|and))?[[:space:]]*(#.*)?$" "$tasks_dir" 2>/dev/null; then
-        return 0
-    fi
-    if grep -RqE "\{[{%][^}]*[^[:alnum:]_-]${feature}([^[:alnum:]_-]|$)" "$tasks_dir" 2>/dev/null; then
+    # Multi-line conditions, where the variable sits on a line of its own (for
+    # example 'upgrade or' inside a '>-' block).
+    if grep -Eq "^[[:space:]]*${feature}([[:space:]]+(or|and))?[[:space:]]*(#.*)?$" "$entrypoint"; then
         return 0
     fi
 
@@ -95,9 +95,43 @@ role_require_capability() {
         return 0
     fi
     echo -e "\e[1mERROR: role '$role' does not support $flag.\e[0m" >&2
-    echo "No '$feature' implementation was detected in $(role_tasks_dir "$role")." >&2
-    echo "Add tasks/${feature}.yml or a 'when: ${feature}' condition, or declare '$feature: true' in $(role_manifest_file "$role")." >&2
+    echo "No '$feature' implementation was detected in $(role_tasks_dir "$role")/main.yml." >&2
+    echo "Reference tasks/${feature}.yml from the role entrypoint, add a 'when: ${feature}' condition there, or declare '$feature: true' in $(role_manifest_file "$role")." >&2
     return 1
+}
+
+STATE_BACKUP_FILE=""
+
+backup_state_file() {
+    local backup
+    backup=$(mktemp /tmp/iiab-state-backup.XXXXXX) || {
+        echo "ERROR: could not create a backup of $IIAB_STATE_FILE." >&2
+        return 1
+    }
+    if ! cp -- "$IIAB_STATE_FILE" "$backup"; then
+        rm -f -- "$backup"
+        echo "ERROR: could not back up $IIAB_STATE_FILE." >&2
+        return 1
+    fi
+    STATE_BACKUP_FILE="$backup"
+}
+
+restore_state_file() {
+    if [ -z "$STATE_BACKUP_FILE" ]; then
+        return 0
+    fi
+    if ! cp -- "$STATE_BACKUP_FILE" "$IIAB_STATE_FILE"; then
+        echo "ERROR: could not restore $IIAB_STATE_FILE from its backup." >&2
+        return 1
+    fi
+    echo "Restored $IIAB_STATE_FILE after uninstall failure." >&2
+}
+
+cleanup_state_backup() {
+    if [ -n "$STATE_BACKUP_FILE" ]; then
+        rm -f -- "$STATE_BACKUP_FILE"
+        STATE_BACKUP_FILE=""
+    fi
 }
 
 # Ask for explicit confirmation before an operation that removes data. Callers
