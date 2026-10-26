@@ -51,7 +51,8 @@
       rejectattr('stdout', 'equalto', 'installed') | list | length > 0
 
 
-- name: Check out Zimantic {{ zimantic_version }}
+- name: Check out Zimantic {{ zimantic_version }} on first pass
+  when: not reinstall
   git:
     repo: "{{ zimantic_repo }}"
     dest: "{{ zimantic_source_dir }}"
