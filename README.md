@@ -31,6 +31,56 @@ After you've installed the software, you should [add content](https://github.com
 
 Finally, you can [customize your Internet-in-a-Box home page](https://wiki.iiab.io/go/FAQ#How_do_I_customize_my_Internet-in-a-Box_home_page%3F) (typically http://box or http://box.lan) using our **drag-and-drop** Admin Console (http://box.lan/admin) &mdash; to arrange Content Packs and IIAB Apps (services) for your local community's needs.
 
+## Running roles individually
+
+`./runrole` applies one role using `/etc/iiab/local_vars.yml`. Runs are
+repeatable: the role is installed if missing, upgraded if needed, and otherwise
+only reconfigured.
+
+    sudo ./runrole captiveportal                    # apply
+    sudo ./runrole --add captiveportal              # apply despite captiveportal_install: False
+    sudo ./runrole --reinstall captiveportal        # reinstall the program
+    sudo ./runrole --upgrade captiveportal          # upgrade, where supported
+    sudo ./runrole --force-reinstall captiveportal  # also reset dependencies, caches, and settings
+    sudo ./runrole --uninstall captiveportal        # uninstall, where supported
+    sudo ./runrole --status captiveportal           # show installed/desired state
+    sudo ./runrole --check captiveportal            # best-effort dry run
+
+The repair options escalate, from least to most work:
+
+- `--reinstall` rebuilds the program only. Every role accepts it.
+- `--upgrade` upgrades it where supported.
+- `--force-reinstall` also resets dependencies, caches, and settings where
+  supported.
+- `--uninstall` removes the program where supported.
+
+`./runroles` accepts the same options and multiple roles, e.g.
+`sudo ./runroles --status captiveportal kiwix`.
+
+`--reinstall` and `--force-reinstall` remove the role's entries from
+`/etc/iiab/iiab_state.yml` before running. Most roles skip `install.yml` while
+their `*_installed` variable is defined, so this forces a reinstall. `runrole`
+exits if the role has no entry; `runroles` installs such roles normally and
+fails only if none of the listed roles are installed. `--uninstall` removes the
+same entries and asks the role to clean up after itself.
+
+A role opts into `--uninstall`, `--upgrade`, or `--force-reinstall` by declaring
+the capability in `roles/<role>/meta/runrole.yml`:
+
+    ---
+    uninstall: true
+    upgrade: true
+    force_reinstall: true
+
+Omitted capabilities are refused: using one of those flags on a role that does
+not declare it prints an error and exits nonzero before anything is changed.
+`--reinstall` remains available to every role for compatibility.
+
+`--add` (`-a`) overrides `*_install: False` for that invocation only and does
+not change `local_vars.yml`. Normal runs do not prompt; `--uninstall` and
+`--force-reinstall` ask for `yes` unless `-y` is given. `--check` runs Ansible in
+check mode (`--check --diff`), which not every role supports.
+
 ## Community
 
 Global community updates and videos are regularly posted to: **[@internet_in_box](https://twitter.com/internet_in_box)**
