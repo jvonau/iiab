@@ -60,9 +60,9 @@ The repair options escalate, from least to most work:
 `--reinstall` and `--force-reinstall` remove the role's entries from
 `/etc/iiab/iiab_state.yml` before running. Most roles skip `install.yml` while
 their `*_installed` variable is defined, so this forces a reinstall. `runrole`
-exits if the role has no entry; `runroles` installs such roles normally and
-fails only if none of the listed roles are installed. `--uninstall` removes the
-same entries and asks the role to clean up after itself.
+exits if the role has no entry; `runroles` installs such roles normally.
+`--uninstall` removes the same entries and asks the role to clean up after
+itself.
 
 A role supports `--uninstall`, `--upgrade`, or `--force-reinstall` when its
 tasks implement that operation. `runrole` and `runroles` detect this from the
