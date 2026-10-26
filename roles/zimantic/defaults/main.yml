@@ -29,6 +29,9 @@ zimantic_system_packages:
   - python3-pymupdf
   - python3-fastapi
   - python3-uvicorn
+  # Needed to rebuild the local project without pip's network-fetching build
+  # isolation (e.g. an offline --reinstall).
+  - python3-setuptools
 # "auto" uses distribution packages only where PyPI wheels are unavailable
 # (32-bit arm), "always" uses them on every architecture, and "never" always
 # installs the native dependencies from PyPI wheels.
