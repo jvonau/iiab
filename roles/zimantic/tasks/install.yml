@@ -51,6 +51,16 @@
       rejectattr('stdout', 'equalto', 'installed') | list | length > 0
 
 
+- name: Check out Zimantic {{ zimantic_version }} on first pass
+  when: not reinstall
+  git:
+    repo: "{{ zimantic_repo }}"
+    dest: "{{ zimantic_source_dir }}"
+    version: "{{ zimantic_version }}"
+    depth: 1
+    update: yes
+    force: no
+
 - name: Create Zimantic Python virtual environment
   command:
     cmd: "{{ zimantic_python }} -m venv {{ '--system-site-packages ' if (zimantic_system_packages_enabled | bool) else '' }}{{ zimantic_venv }}"
