@@ -226,11 +226,9 @@ elif $REINSTALL; then
         echo "Use --force-reinstall to also reset dependencies, caches, indexes, and settings where the roles support it."
     fi
 
-    found=false
     for role in "${ROLES[@]}"; do
         var=$(role_var "$role")
         if grep -q "^${var}_" "$IIAB_STATE_FILE"; then
-            found=true
             echo "Reinstalling $role. Deleting from $IIAB_STATE_FILE:"
             grep "^${var}_" "$IIAB_STATE_FILE" | sed 's/^/  /'
             sed -i "/^${var}_/d" "$IIAB_STATE_FILE"
@@ -239,12 +237,6 @@ elif $REINSTALL; then
         fi
     done
     echo
-
-    if ! $found; then
-        echo -e "\e[1mERROR: none of the listed roles are installed in $IIAB_STATE_FILE\e[0m"
-        echo "Run without --reinstall to install them normally."
-        exit 1
-    fi
 elif $UPGRADE; then
     echo "Upgrading listed role(s)."
     echo
