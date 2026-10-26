@@ -25,24 +25,24 @@ usage() {
     cat <<'EOF'
 Usage: ./runrole [options] <role> [logfile]
 
-Apply a role using /etc/iiab/local_vars.yml. This is safe to repeat: the role
-is installed if missing, upgraded if needed, and otherwise only reconfigured.
+Apply a role using /etc/iiab/local_vars.yml. Runs are repeatable: the role is
+installed if missing, upgraded if needed, and otherwise only reconfigured.
 
 Options:
   -y, --yes             Do not ask for confirmation
   -a, --add             Run the role even if '*_install: False'
       --apply           Apply settings (the default)
-      --upgrade         Upgrade where the role supports it
       --reinstall       Reinstall the program
-      --force-reinstall Reinstall, and reset dependencies/caches/settings where supported
+      --upgrade         Upgrade where the role supports it
+      --force-reinstall Reinstall and reset dependencies, caches, and settings where supported
       --check           Best-effort Ansible check mode (--check --diff)
       --status          Show installed/desired state without changing anything
   -h, --help            Show this help
 
 Examples:
   ./runrole captiveportal
-  ./runrole --upgrade captiveportal
   ./runrole --reinstall captiveportal
+  ./runrole --upgrade captiveportal
   ./runrole --force-reinstall captiveportal
 EOF
 }
@@ -256,5 +256,6 @@ echo -e "\e[1mRunning:\e[0m\n\n$CMD\n"
 ansible -m setup -a 'gather_subset=!hardware,!network' -i $INVENTORY localhost --connection=local | grep python
 $CMD
 
-# $ARGS is deliberately unquoted so word splitting hands Ansible the JSON
-# object as one argument. It contains no spaces; do not add quotes around it.
+# $ARGS is deliberately unquoted so the shell splits it into --extra-vars and
+# the JSON object. The JSON contains no spaces, so it stays one argument; do
+# not quote $ARGS.

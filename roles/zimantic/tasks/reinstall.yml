@@ -1,9 +1,9 @@
 ---
 # Included only when 'reinstall' (or 'force_reinstall') is set.
 #
-# A plain --reinstall reinstalls the program from the local checkout but keeps
-# the virtual environment, so it needs no internet. The dependencies stay
-# exactly as they were; use --force-reinstall to reset them.
+# A plain --reinstall rebuilds the program from the local checkout but keeps the
+# virtual environment and dependencies, so it works offline. Data, indexes, and
+# settings are kept too; use --force-reinstall to reset them.
 
 - name: Check whether zimantic.service is installed
   stat:

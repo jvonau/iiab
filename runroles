@@ -28,25 +28,25 @@ usage() {
     cat <<'EOF'
 Usage: ./runroles [options] <role> [role ...]
 
-Apply one or more roles using /etc/iiab/local_vars.yml. This is safe to
-repeat: roles are installed if missing, upgraded if needed, and otherwise
-only reconfigured.
+Apply one or more roles using /etc/iiab/local_vars.yml. Runs are repeatable:
+roles are installed if missing, upgraded if needed, and otherwise only
+reconfigured.
 
 Options:
   -y, --yes             Do not ask for confirmation
   -a, --add             Run the roles even if '*_install: False'
       --apply           Apply settings (the default)
-      --upgrade         Upgrade where the roles support it
       --reinstall       Reinstall the programs
-      --force-reinstall Reinstall, and reset dependencies/caches/settings where supported
+      --upgrade         Upgrade where the roles support it
+      --force-reinstall Reinstall and reset dependencies, caches, and settings where supported
       --check           Best-effort Ansible check mode (--check --diff)
       --status          Show installed/desired state without changing anything
   -h, --help            Show this help
 
 Examples:
   ./runroles zimantic kiwix
-  ./runroles --upgrade zimantic
   ./runroles --reinstall zimantic calibre-web
+  ./runroles --upgrade zimantic
 EOF
 }
 

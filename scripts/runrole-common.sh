@@ -3,7 +3,8 @@
 # Shared by ./runrole and ./runroles. Both set these paths before sourcing:
 # DEFAULT_VARS_FILE, LOCAL_VARS_FILE, IIAB_STATE_FILE, IIAB_INI_FILE.
 
-# Ansible role name & var name sometimes differ :/
+# Role and variable names sometimes differ (for example, calibre-web and
+# calibreweb).
 role_var() {
     case $1 in
         calibre-web)
