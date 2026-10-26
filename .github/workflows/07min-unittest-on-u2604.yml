@@ -58,9 +58,9 @@ jobs:
         run: |
           sudo mkdir /etc/iiab
           # local_vars_unittest.yml installs a quite minimal IIAB, without IIAB Apps
+          sudo echo "zimantic_install: True" >> "/opt/iiab/iiab/vars/local_vars_unittest.yml"
+          sudo echo "zimantic_enabled: True" >> "/opt/iiab/iiab/vars/local_vars_unittest.yml"
           sudo cp /opt/iiab/iiab/vars/local_vars_unittest.yml /etc/iiab/local_vars.yml
-          sudo echo "zimantic_install: True" >> "/etc/iiab/local_vars.yml"
-          sudo echo "zimantic_enabled: True" >> "/etc/iiab/local_vars.yml"
       - run: sudo /opt/iiab/iiab/scripts/ansible    # Installs Ansible
         working-directory: /opt/iiab/iiab
       - run: sudo ./iiab-install                    # Installs IIAB!
