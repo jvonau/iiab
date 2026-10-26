@@ -182,10 +182,12 @@ if [ ! -f /etc/iiab/local_vars.yml ]; then
 fi
 
 CHECK_STATE_FILE=""
+STATE_BACKUP_FILE=""
 cleanup_check_state() {
     if [ -n "$CHECK_STATE_FILE" ]; then
         rm -f "$CHECK_STATE_FILE"
     fi
+    cleanup_state_backup
 }
 trap cleanup_check_state EXIT
 
@@ -233,7 +235,12 @@ if $UNINSTALL; then   # Add '_' so '--uninstall calibre' doesn't zap calibreweb
         echo -e "\e[1mUninstalling ${ROLE_NAME}.\e[0m\n"
         echo -e "Deleting these line(s) from $IIAB_STATE_FILE:\n"
         grep "^${ROLE_VAR}_" $IIAB_STATE_FILE; echo
-        sed -i "/^${ROLE_VAR}_/d" $IIAB_STATE_FILE
+        backup_state_file || exit 1
+        if ! sed -i "/^${ROLE_VAR}_/d" "$IIAB_STATE_FILE"; then
+            echo "ERROR: could not update $IIAB_STATE_FILE." >&2
+            restore_state_file
+            exit 1
+        fi
         echo -e "Set '${ROLE_VAR}_install: False' in $LOCAL_VARS_FILE to keep it uninstalled.\n"
     else
         echo -e "\e[1mERROR: $IIAB_STATE_FILE has no line(s) that begin with '${ROLE_VAR}_'\e[0m\n"
@@ -292,6 +299,11 @@ fi
 echo -e "\e[1mRunning:\e[0m\n\n$CMD\n"
 ansible -m setup -a 'gather_subset=!hardware,!network' -i $INVENTORY localhost --connection=local | grep python
 $CMD
+STATUS_CODE=$?
+if [ "$STATUS_CODE" -ne 0 ]; then
+    restore_state_file
+    exit "$STATUS_CODE"
+fi
 
 # $ARGS is deliberately unquoted so the shell splits it into --extra-vars and
 # the JSON object. The JSON contains no spaces, so it stays one argument; do

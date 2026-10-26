@@ -65,10 +65,11 @@ exits if the role has no entry; `runroles` installs such roles normally.
 itself.
 
 A role supports `--uninstall`, `--upgrade`, or `--force-reinstall` when its
-tasks implement that operation. `runrole` and `runroles` detect this from the
-role's task files, so no separate metadata file is needed. For example, a role
-can provide `tasks/uninstall.yml`, include such a file, or gate work with
-`when: uninstall`:
+`tasks/main.yml` or `tasks/main.yaml` implements that operation. `runrole` and
+`runroles` detect this from the role entrypoint, so an unused
+`tasks/uninstall.yml` file alone does not opt a role in and no separate
+metadata file is needed. For example, a role can reference a feature task file
+from its entrypoint, or gate work with `when: uninstall`:
 
     - name: Uninstall Example
       include_tasks: uninstall.yml
