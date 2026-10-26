@@ -124,7 +124,7 @@
     checksum: "{{ zimantic_selected_tokenizer_checksum }}"
     timeout: "{{ download_timeout }}"
   register: zimantic_tokenizer_download
-      when: zimantic_mode == 'semantic'
+  when: zimantic_mode == 'semantic'
 
 - name: Check for the Zimantic embedding model
   stat:
