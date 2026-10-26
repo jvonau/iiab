@@ -63,10 +63,6 @@ while [[ $# -gt 0 ]]; do
     case $1 in    # if-else would do the job, but case statement allows for future changes...
         --apply)
             ;;    # Explicit apply is the default behavior
-        --uninstall)
-            UNINSTALL=true
-            ARGS="$ARGS\"uninstall\":True,"    # Needs boolean not string so use JSON list
-            ;;
         --reinstall)
             REINSTALL=true
             ARGS="$ARGS\"reinstall\":True,"    # Needs boolean not string so use JSON list
@@ -79,6 +75,10 @@ while [[ $# -gt 0 ]]; do
         --upgrade)
             UPGRADE=true
             ARGS="$ARGS\"upgrade\":True,"
+            ;;
+        --uninstall)
+            UNINSTALL=true
+            ARGS="$ARGS\"uninstall\":True,"    # Needs boolean not string so use JSON list
             ;;
         -y|--yes)
             ASSUME_YES=true
