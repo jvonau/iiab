@@ -38,9 +38,9 @@ Options:
   -a, --add             Run the roles even if '*_install: False'
       --apply           Apply settings (the default)
       --reinstall       Reinstall the programs (supported by every role)
-      --upgrade         Upgrade (roles that declare 'upgrade')
-      --force-reinstall Reinstall and reset dependencies, caches, and settings (roles that declare 'force_reinstall')
-      --uninstall       Uninstall the programs (roles that declare 'uninstall')
+      --upgrade         Upgrade (roles that implement 'upgrade')
+      --force-reinstall Reinstall and reset dependencies, caches, and settings (roles that implement 'force_reinstall')
+      --uninstall       Uninstall the programs (roles that implement 'uninstall')
       --check           Best-effort Ansible check mode (--check --diff)
       --status          Show installed/desired state without changing anything
   -h, --help            Show this help
