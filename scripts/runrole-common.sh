@@ -22,26 +22,71 @@ role_var() {
     esac
 }
 
-# A role opts into the destructive/extended operations by declaring them in
-# roles/<role>/meta/runrole.yml, for example:
-#
-#     uninstall: true
-#     upgrade: true
-#     force_reinstall: true
 role_manifest_file() {
     echo "roles/$1/meta/runrole.yml"
 }
 
-# True if <role> declares support for <feature> (uninstall, upgrade, or
-# force_reinstall) in its manifest.
-role_supports() {
-    local manifest
-    manifest=$(role_manifest_file "$1")
-    [ -f "$manifest" ] || return 1
-    grep -Eq "^${2}:[[:space:]]*([Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Oo][Nn])[[:space:]]*$" "$manifest"
+role_tasks_dir() {
+    echo "roles/$1/tasks"
 }
 
-# Print an error and return nonzero unless <role> declares <feature>.
+# True if <role> implements <feature> (uninstall, upgrade, or force_reinstall).
+#
+# No manifest is required. A role is recognized when its task files contain a
+# dedicated tasks/<feature>.yml, include or import that file, or reference the
+# feature variable in a condition such as 'when: upgrade'. A meta/runrole.yml
+# can still opt in explicitly, for the rare role whose implementation is not
+# visible from its tasks, but most roles should not need one.
+role_supports() {
+    local role=$1
+    local feature=$2
+    local manifest
+    local tasks_dir
+    manifest=$(role_manifest_file "$role")
+    tasks_dir=$(role_tasks_dir "$role")
+
+    # Optional explicit opt-in, for roles whose implementation cannot be
+    # recognized from their task files.
+    if [ -f "$manifest" ] && grep -Eq "^${feature}:[[:space:]]*([Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Oo][Nn])[[:space:]]*$" "$manifest"; then
+        return 0
+    fi
+
+    [ -d "$tasks_dir" ] || return 1
+
+    # Dedicated task file, e.g. tasks/uninstall.yml.
+    if [ -f "$tasks_dir/${feature}.yml" ] || [ -f "$tasks_dir/${feature}.yaml" ]; then
+        return 0
+    fi
+
+    # Include/import of a dedicated task file.
+    if grep -RqE "^[[:space:]]*(-[[:space:]]+)?(include_tasks|import_tasks):[[:space:]]*['\"]?([^'\"]*/)?${feature}(\.ya?ml)?['\"]?[[:space:]]*$" "$tasks_dir" 2>/dev/null; then
+        return 0
+    fi
+
+    # Single-line conditions such as 'when: uninstall' or
+    # 'when: reinstall or force_reinstall'.
+    if grep -RqE "^[[:space:]]*when:[^#]*[^[:alnum:]_-]${feature}([^[:alnum:]_-]|$)" "$tasks_dir" 2>/dev/null; then
+        return 0
+    fi
+
+    # List-style conditions, e.g. a '- uninstall' item below 'when:'.
+    if grep -RqE "^[[:space:]]*-[[:space:]]+(not[[:space:]]+)?${feature}[[:space:]]*(#.*)?$" "$tasks_dir" 2>/dev/null; then
+        return 0
+    fi
+
+    # Multi-line conditions and Jinja expressions, where the variable sits on
+    # a line of its own (for example 'upgrade or' inside a '>-' block).
+    if grep -RqE "^[[:space:]]*${feature}([[:space:]]+(or|and))?[[:space:]]*(#.*)?$" "$tasks_dir" 2>/dev/null; then
+        return 0
+    fi
+    if grep -RqE "\{[{%][^}]*[^[:alnum:]_-]${feature}([^[:alnum:]_-]|$)" "$tasks_dir" 2>/dev/null; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Print an error and return nonzero unless <role> implements <feature>.
 role_require_capability() {
     local role=$1
     local flag=$2
@@ -50,7 +95,8 @@ role_require_capability() {
         return 0
     fi
     echo -e "\e[1mERROR: role '$role' does not support $flag.\e[0m" >&2
-    echo "Expected '$feature: true' in $(role_manifest_file "$role")." >&2
+    echo "No '$feature' implementation was detected in $(role_tasks_dir "$role")." >&2
+    echo "Add tasks/${feature}.yml or a 'when: ${feature}' condition, or declare '$feature: true' in $(role_manifest_file "$role")." >&2
     return 1
 }
 

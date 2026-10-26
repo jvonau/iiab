@@ -22,9 +22,10 @@ iiab_revision: 0
 # iiab-install to run with 'skip_role_on_error: True' (PRs #3255, #3256, #3262)
 skip_role_on_error: True
 
-# Passed by ./runrole and ./runroles. Only roles that declare the matching
-# capability in roles/<role>/meta/runrole.yml accept --uninstall, --upgrade,
-# and --force-reinstall. --force-reinstall always sets reinstall too.
+# Passed by ./runrole and ./runroles. Only roles whose tasks implement the
+# matching operation accept --uninstall, --upgrade, and --force-reinstall.
+# ./runrole detects this from the role's tasks (no metadata file required).
+# --force-reinstall always sets reinstall too.
 uninstall: False
 reinstall: False
 force_reinstall: False

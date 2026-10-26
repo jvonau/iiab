@@ -64,17 +64,28 @@ exits if the role has no entry; `runroles` installs such roles normally and
 fails only if none of the listed roles are installed. `--uninstall` removes the
 same entries and asks the role to clean up after itself.
 
-A role opts into `--uninstall`, `--upgrade`, or `--force-reinstall` by declaring
-the capability in `roles/<role>/meta/runrole.yml`:
+A role supports `--uninstall`, `--upgrade`, or `--force-reinstall` when its
+tasks implement that operation. `runrole` and `runroles` detect this from the
+role's task files, so no separate metadata file is needed. For example, a role
+can provide `tasks/uninstall.yml`, include such a file, or gate work with
+`when: uninstall`:
+
+    - name: Uninstall Example
+      include_tasks: uninstall.yml
+      when: uninstall
+
+Operations that are not detected are refused: using one of those flags on a
+role that does not implement it prints an error and exits nonzero before
+anything is changed. `--status` reports the capabilities detected for a role.
+`--reinstall` remains available to every role for compatibility.
+
+For unusual roles whose implementation cannot be detected from their tasks, an
+optional `roles/<role>/meta/runrole.yml` can still opt in:
 
     ---
     uninstall: true
     upgrade: true
     force_reinstall: true
-
-Omitted capabilities are refused: using one of those flags on a role that does
-not declare it prints an error and exits nonzero before anything is changed.
-`--reinstall` remains available to every role for compatibility.
 
 `--add` (`-a`) overrides `*_install: False` for that invocation only and does
 not change `local_vars.yml`. Normal runs do not prompt; `--uninstall` and
