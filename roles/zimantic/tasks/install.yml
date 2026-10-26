@@ -51,6 +51,15 @@
       rejectattr('stdout', 'equalto', 'installed') | list | length > 0
 
 
+- name: Check out Zimantic {{ zimantic_version }}
+  git:
+    repo: "{{ zimantic_repo }}"
+    dest: "{{ zimantic_source_dir }}"
+    version: "{{ zimantic_version }}"
+    depth: 1
+    update: yes
+    force: no
+
 - name: Create Zimantic Python virtual environment
   command:
     cmd: "{{ zimantic_python }} -m venv {{ '--system-site-packages ' if (zimantic_system_packages_enabled | bool) else '' }}{{ zimantic_venv }}"
@@ -142,7 +151,7 @@
   fail:
     msg: "Semantic mode needs model.onnx and {{ zimantic_selected_tokenizer_file }} in {{ zimantic_model_dir }}; the download failed or the files were removed"
   when:
-   - "{{ zimantic_mode }}" == 'semantic'
+   - zimantic_mode  == 'semantic'
    - not zimantic_model_file.stat.exists or
      not zimantic_tokenizer_file.stat.exists
 
