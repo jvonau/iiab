@@ -151,9 +151,9 @@
   fail:
     msg: "Semantic mode needs model.onnx and {{ zimantic_selected_tokenizer_file }} in {{ zimantic_model_dir }}; the download failed or the files were removed"
   when:
-   - zimantic_mode  == 'semantic'
-   - not zimantic_model_file.stat.exists or
-     not zimantic_tokenizer_file.stat.exists
+    - zimantic_mode  == 'semantic'
+    - not zimantic_model_file.stat.exists or
+      not zimantic_tokenizer_file.stat.exists
 
 - name: Install Zimantic configuration
   template:
