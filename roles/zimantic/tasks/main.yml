@@ -1,0 +1,342 @@
+# "How do i fail a task in Ansible if the variable contains a boolean value?
+# I want to perform input validation for Ansible playbooks"
+
+- name: Assert that "zimantic_install is sameas true" (boolean not string etc)
+  assert:
+    that: zimantic_install is sameas true
+    fail_msg: "PLEASE SET 'zimantic_install: True' e.g. IN: /etc/iiab/local_vars.yml"
+    quiet: yes
+
+- name: Assert that "zimantic_enabled | type_debug == 'bool'" (boolean not string etc)
+  assert:
+    that: zimantic_enabled | type_debug == 'bool'
+    fail_msg: "PLEASE GIVE VARIABLE 'zimantic_enabled' A PROPER (UNQUOTED) ANSIBLE BOOLEAN VALUE e.g. IN: /etc/iiab/local_vars.yml"
+    quiet: yes
+
+- name: Assert that "zimantic_mode" is supported
+  assert:
+    that: zimantic_mode in ['fast', 'semantic']
+    fail_msg: "zimantic_mode must be either 'fast' or 'semantic'"
+    quiet: yes
+
+- block:
+
+    - name: Fail on unsupported PRoot/Android environment
+      fail:
+        msg: "The Zimantic role currently requires regular systemd; PRoot/Android is not supported"
+      when: is_proot
+
+    - name: Validate zimantic_use_system_packages
+      assert:
+        that: zimantic_use_system_packages in ['auto', 'always', 'never']
+        fail_msg: "zimantic_use_system_packages must be 'auto', 'always', or 'never'"
+        quiet: yes
+
+    - name: Determine whether to use distribution packages
+      set_fact:
+        zimantic_system_packages_enabled: >-
+          {{ zimantic_use_system_packages == 'always' or
+             (zimantic_use_system_packages == 'auto' and
+              ansible_facts.machine not in ['aarch64', 'x86_64']) }}
+
+    - name: Validate zimantic_embedding_model
+      assert:
+        that: zimantic_embedding_model in ['auto', 'multilingual-e5-small', 'e5-small-v2']
+        fail_msg: "zimantic_embedding_model must be 'auto', 'multilingual-e5-small', or 'e5-small-v2'"
+        quiet: yes
+
+    - name: Determine which embedding model to use
+      set_fact:
+        zimantic_embedding_model_selected: >-
+          {{ 'e5-small-v2' if (zimantic_embedding_model == 'auto' and
+                               (ansible_facts.memtotal_mb | default(2048) | int) <= 1024)
+             else (zimantic_embedding_model if zimantic_embedding_model != 'auto'
+                   else 'multilingual-e5-small') }}
+
+    - name: Select embedding model files
+      set_fact:
+        zimantic_selected_model_url: "{{ zimantic_english_model_url if zimantic_embedding_model_selected == 'e5-small-v2' else zimantic_multilingual_model_url }}"
+        zimantic_selected_model_checksum: "{{ zimantic_english_model_checksum if zimantic_embedding_model_selected == 'e5-small-v2' else zimantic_multilingual_model_checksum }}"
+        zimantic_selected_tokenizer_file: "{{ zimantic_english_tokenizer_file if zimantic_embedding_model_selected == 'e5-small-v2' else zimantic_multilingual_tokenizer_file }}"
+        zimantic_selected_tokenizer_url: "{{ zimantic_english_tokenizer_url if zimantic_embedding_model_selected == 'e5-small-v2' else zimantic_multilingual_tokenizer_url }}"
+        zimantic_selected_tokenizer_checksum: "{{ zimantic_english_tokenizer_checksum if zimantic_embedding_model_selected == 'e5-small-v2' else zimantic_multilingual_tokenizer_checksum }}"
+        zimantic_unused_tokenizer_file: "{{ zimantic_multilingual_tokenizer_file if zimantic_embedding_model_selected == 'e5-small-v2' else zimantic_english_tokenizer_file }}"
+
+    - name: Check for a supported Python version
+      command: "{{ zimantic_python }} --version"
+      register: zimantic_python_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if a supported Python version is unavailable
+      fail:
+        msg: "Zimantic currently requires Python 3.11-3.14; install a compatible {{ zimantic_python }} before enabling the zimantic role"
+      when:
+        - zimantic_python_check.rc != 0 or
+          ((zimantic_python_check.stdout ~ zimantic_python_check.stderr) is not search('Python 3\\.(1[1-4])\\.'))
+
+    # Checking first keeps offline reruns from touching the network: apt would
+    # otherwise run 'apt-get update' on every run, even when nothing is missing.
+    - name: Check which Zimantic system packages are missing
+      command: "dpkg-query -W -f='${db:Status-Status}' {{ item }}"
+      register: zimantic_system_package_status
+      changed_when: false
+      failed_when: false
+      loop: "{{ zimantic_system_packages }}"
+      when: zimantic_system_packages_enabled | bool
+
+    - name: Install native dependencies from the distribution
+      apt:
+        name: "{{ zimantic_system_packages }}"
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+      when:
+        - zimantic_system_packages_enabled | bool
+        - zimantic_system_package_status.results | default([]) |
+          rejectattr('stdout', 'equalto', 'installed') | list | length > 0
+
+    - name: Prepare an existing Zimantic install for reinstall
+      include_tasks: reinstall.yml
+      when: reinstall or force_reinstall
+
+    - name: Create Linux user {{ zimantic_user }}
+      user:
+        name: "{{ zimantic_user }}"
+        state: present
+        shell: /usr/sbin/nologin
+        system: yes
+        create_home: no
+
+    - name: Create Zimantic directories
+      file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner | default(zimantic_user) }}"
+        group: "{{ item.group | default(zimantic_user) }}"
+        mode: "{{ item.mode | default('0755') }}"
+      loop:
+        - path: "{{ zimantic_source_dir }}"
+          owner: root
+          group: root
+        - path: "{{ zimantic_data_dir }}"
+        - path: "{{ zimantic_index_dir }}"
+        - path: "{{ zimantic_model_dir }}"
+        - path: "{{ zimantic_zim_dir }}"
+          owner: root
+          group: root
+
+    # 'git: update: yes' fetches from the remote even when the requested
+    # version is already checked out, which fails on an offline rerun.
+    - name: Check the current Zimantic source revision
+      command: "git -C {{ zimantic_source_dir }} rev-parse HEAD"
+      register: zimantic_source_head
+      changed_when: false
+      failed_when: false
+      when: (zimantic_source_dir ~ '/.git') is exists
+
+    - name: Check the current Zimantic source tag
+      command: "git -C {{ zimantic_source_dir }} describe --tags --exact-match"
+      register: zimantic_source_tag
+      changed_when: false
+      failed_when: false
+      when: (zimantic_source_dir ~ '/.git') is exists
+
+    - name: Check the current Zimantic source remote
+      command: "git -C {{ zimantic_source_dir }} remote get-url origin"
+      register: zimantic_source_remote
+      changed_when: false
+      failed_when: false
+      when: (zimantic_source_dir ~ '/.git') is exists
+
+    # 'git: update: no' returns before resetting anything, so use this check to
+    # keep the checkout clean without fetching from the remote.
+    - name: Check for local modifications in the Zimantic source
+      command: "git -C {{ zimantic_source_dir }} diff-index --quiet HEAD --"
+      register: zimantic_source_local_mods
+      changed_when: false
+      failed_when: false
+      when: (zimantic_source_dir ~ '/.git') is exists
+
+    - name: Determine whether the Zimantic source already matches {{ zimantic_version }}
+      set_fact:
+        zimantic_source_matches_version: >-
+          {{ (((zimantic_source_tag.stdout | default('')) == zimantic_version) or
+              (((zimantic_version | string) is search('^[0-9a-f]{7,40}$')) and
+               (zimantic_source_head.stdout | default('')).startswith(zimantic_version | string))) and
+             ((zimantic_source_remote.stdout | default('')) == zimantic_repo) }}
+
+    # The source directory is documented as disposable: discard local tracked
+    # changes even when the version already matches.
+    - name: Discard local changes in the matching Zimantic source
+      command: "git -C {{ zimantic_source_dir }} reset --hard HEAD"
+      register: zimantic_source_reset
+      when:
+        - zimantic_source_matches_version | bool
+        - zimantic_source_local_mods.rc != 0
+
+    - name: Check out Zimantic {{ zimantic_version }}
+      git:
+        repo: "{{ zimantic_repo }}"
+        dest: "{{ zimantic_source_dir }}"
+        version: "{{ zimantic_version }}"
+        depth: 1
+        update: "{{ not (zimantic_source_matches_version | bool) }}"
+        force: yes
+      register: zimantic_source_update
+
+    - name: Check for the Zimantic executable
+      stat:
+        path: "{{ zimantic_venv }}/bin/zimantic"
+      register: zimantic_executable
+
+    - name: Determine whether Zimantic needs installation or upgrade
+      set_fact:
+        zimantic_needs_install: >-
+          {{ (not (zimantic_installed | default(false) | bool)) or
+             reinstall or
+             upgrade or
+             zimantic_source_update.changed or
+             zimantic_source_reset.changed or
+             ((zimantic_installed_version | default('')) != zimantic_version) or
+             (not zimantic_executable.stat.exists) }}
+
+    - name: Install or upgrade Zimantic
+      include_tasks: install.yml
+      when: zimantic_needs_install
+
+    # Both tokenizers in one model directory would make Zimantic choose
+    # SentencePiece, which is wrong for the English model.
+    - name: Remove the tokenizer left by a different embedding model
+      file:
+        path: "{{ zimantic_model_dir }}/{{ zimantic_unused_tokenizer_file }}"
+        state: absent
+      register: zimantic_unused_tokenizer
+      when: zimantic_mode == 'semantic'
+
+    - name: Download Zimantic embedding model
+      get_curl:
+        url: "{{ zimantic_selected_model_url }}"
+        dest: "{{ zimantic_model_dir }}/model.onnx"
+        checksum: "{{ zimantic_selected_model_checksum }}"
+        timeout: "{{ download_timeout }}"
+      register: zimantic_model_download
+      when: zimantic_mode == 'semantic'
+
+    - name: Download Zimantic tokenizer
+      get_curl:
+        url: "{{ zimantic_selected_tokenizer_url }}"
+        dest: "{{ zimantic_model_dir }}/{{ zimantic_selected_tokenizer_file }}"
+        checksum: "{{ zimantic_selected_tokenizer_checksum }}"
+        timeout: "{{ download_timeout }}"
+      register: zimantic_tokenizer_download
+      when: zimantic_mode == 'semantic'
+
+    - name: Check for the Zimantic embedding model
+      stat:
+        path: "{{ zimantic_model_dir }}/model.onnx"
+      register: zimantic_model_file
+      when: zimantic_mode == 'semantic'
+
+    - name: Check for the Zimantic tokenizer
+      stat:
+        path: "{{ zimantic_model_dir }}/{{ zimantic_selected_tokenizer_file }}"
+      register: zimantic_tokenizer_file
+      when: zimantic_mode == 'semantic'
+
+    - name: Fail if semantic mode has no embedding model
+      fail:
+        msg: "Semantic mode needs model.onnx and {{ zimantic_selected_tokenizer_file }} in {{ zimantic_model_dir }}; the download failed or the files were removed"
+      when:
+        - zimantic_mode == 'semantic'
+        - not zimantic_model_file.stat.exists or
+          not zimantic_tokenizer_file.stat.exists
+
+    - name: Install Zimantic configuration
+      template:
+        src: config.toml.j2
+        dest: "{{ zimantic_config_file }}"
+        owner: "{{ zimantic_user }}"
+        group: "{{ zimantic_user }}"
+        mode: "0644"
+      register: zimantic_config_update
+
+    - name: Install zimantic.service
+      template:
+        src: zimantic.service.j2
+        dest: /etc/systemd/system/zimantic.service
+        owner: root
+        group: root
+        mode: "0644"
+      register: zimantic_service_update
+
+    - name: daemon_reload, so systemd reads the new zimantic.service
+      systemd:
+        daemon_reload: yes
+      when: zimantic_service_update.changed
+
+    - name: Restart Zimantic after installation, configuration, mode, or model change
+      systemd:
+        name: zimantic
+        state: restarted
+      when:
+        - zimantic_enabled
+        - zimantic_needs_install or
+          zimantic_config_update.changed or
+          zimantic_service_update.changed or
+          zimantic_unused_tokenizer.changed or
+          zimantic_model_download.changed or
+          zimantic_tokenizer_download.changed
+
+    - include_tasks: enable-or-disable.yml
+
+    - name: Add 'zimantic' variable values to {{ iiab_ini_file }}
+      ini_file:
+        path: "{{ iiab_ini_file }}"
+        section: zimantic
+        option: "{{ item.option }}"
+        value: "{{ item.value | string }}"
+      with_items:
+        - option: name
+          value: Zimantic
+        - option: description
+          value: '"Meaning-based and full-text search for local Kiwix ZIM files."'
+        - option: zimantic_install
+          value: "{{ zimantic_install }}"
+        - option: zimantic_enabled
+          value: "{{ zimantic_enabled }}"
+        - option: zimantic_mode
+          value: "{{ zimantic_mode }}"
+        - option: zimantic_embedding_model
+          value: "{{ zimantic_embedding_model_selected }}"
+        - option: zimantic_version
+          value: "{{ zimantic_version }}"
+        - option: zimantic_url
+          value: "{{ zimantic_url }}"
+        - option: zimantic_port
+          value: "{{ zimantic_port }}"
+        - option: zimantic_source_dir
+          value: "{{ zimantic_source_dir }}"
+        - option: zimantic_data_dir
+          value: "{{ zimantic_data_dir }}"
+        - option: zimantic_zim_dir
+          value: "{{ zimantic_zim_dir }}"
+        - option: zimantic_index_dir
+          value: "{{ zimantic_index_dir }}"
+
+  rescue:
+
+    - name: Restart Zimantic after a failed reinstall
+      systemd:
+        name: zimantic
+        state: started
+      when:
+        - reinstall
+        - zimantic_active is defined and
+          zimantic_active.rc is defined and
+          zimantic_active.rc == 0
+
+    - name: 'SEE ERROR ABOVE (skip_role_on_error: {{ skip_role_on_error }})'
+      fail:
+        msg: ""
+      when: not skip_role_on_error
