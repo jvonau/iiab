@@ -24,15 +24,6 @@ iiab_revision: 0
 # iiab-install to run with 'skip_role_on_error: True' (PRs #3255, #3256, #3262)
 skip_role_on_error: True
 
-# Passed by ./runrole and ./runroles. Only roles whose tasks implement the
-# matching operation accept --uninstall, --upgrade, and --clean-install.
-# ./runrole detects this from the role's tasks (no metadata file required).
-# --clean-install always sets reinstall too.
-uninstall: False
-reinstall: False
-force_reinstall: False
-upgrade: False
-
 etc_path: /etc
 iiab_etc_path: "{{ etc_path }}/iiab"
 
@@ -796,6 +787,16 @@ pbx_http_port: 83
 # keep around until admin-console catches up
 kalite_server_port: 8008
 kalite_root: "{{ content_base }}/ka-lite"    # /library/ka-lite
+
+# Internal flags passed by ./runrole and ./runroles -- not intended for
+# local_vars.yml. Only roles whose tasks implement the matching operation
+# accept --uninstall, --upgrade, and --clean-install. ./runrole detects this
+# from the role's tasks (no metadata file required).
+# --clean-install always sets reinstall too.
+uninstall: False
+reinstall: False
+force_reinstall: False
+upgrade: False
 
 # =============================================================================
 
