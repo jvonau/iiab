@@ -67,13 +67,17 @@ role_supports() {
     fi
 
     # Single-line conditions such as 'when: uninstall' or
-    # 'when: reinstall or force_reinstall'.
-    if grep -Eq "^[[:space:]]*when:[^#]*[^[:alnum:]_-]${feature}([^[:alnum:]_-]|$)" "$entrypoint"; then
+    # 'when: reinstall or force_reinstall'. Ignore negated references such as
+    # 'when: not uninstall', which mean the opposite.
+    if grep -E "^[[:space:]]*when:" "$entrypoint" |
+        grep -Ev "not[[:space:]]+${feature}([^[:alnum:]_-]|$)" |
+        grep -Eq "[^[:alnum:]_-]${feature}([^[:alnum:]_-]|$)"; then
         return 0
     fi
 
-    # List-style conditions, e.g. a '- uninstall' item below 'when:'.
-    if grep -Eq "^[[:space:]]*-[[:space:]]+(not[[:space:]]+)?${feature}[[:space:]]*(#.*)?$" "$entrypoint"; then
+    # List-style conditions, e.g. a '- uninstall' item below 'when:'. A
+    # negated item ('- not uninstall') does not opt the role in.
+    if grep -Eq "^[[:space:]]*-[[:space:]]+${feature}[[:space:]]*(#.*)?$" "$entrypoint"; then
         return 0
     fi
 
@@ -95,7 +99,7 @@ role_require_capability() {
         return 0
     fi
     echo -e "\e[1mERROR: role '$role' does not support $flag.\e[0m" >&2
-    echo "No '$feature' implementation was detected in $(role_tasks_dir "$role")/main.yml." >&2
+    echo "No '$feature' implementation was detected in $(role_tasks_dir "$role")/main.yml (or main.yaml)." >&2
     echo "Reference tasks/${feature}.yml from the role entrypoint, add a 'when: ${feature}' condition there, or declare '$feature: true' in $(role_manifest_file "$role")." >&2
     return 1
 }
@@ -124,7 +128,7 @@ restore_state_file() {
         echo "ERROR: could not restore $IIAB_STATE_FILE from its backup." >&2
         return 1
     fi
-    echo "Restored $IIAB_STATE_FILE after uninstall failure." >&2
+    echo "Restored $IIAB_STATE_FILE after the failed operation." >&2
 }
 
 cleanup_state_backup() {

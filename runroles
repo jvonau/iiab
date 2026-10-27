@@ -13,7 +13,7 @@ ADD=false
 CHECK=false
 STATUS=false
 ROLES=()
-EXTRA_VARS="{"
+EXTRA_VARS='{"skip_role_on_error":False,'
 INVENTORY=ansible_hosts
 PLAYBOOK=run-roles-tmp.yml
 
@@ -49,7 +49,7 @@ Examples:
   ./runroles zimantic kiwix
   ./runroles --reinstall zimantic calibre-web
   ./runroles --upgrade zimantic
-  ./runroles --uninstall zimantic calibre-web
+  ./runroles --uninstall zimantic
 EOF
 }
 
@@ -130,6 +130,11 @@ if $CHECK && $REINSTALL; then
     exit 1
 fi
 
+if $STATUS && ($UNINSTALL || $REINSTALL || $UPGRADE || $ADD || $CHECK); then
+    echo "--status is read-only and cannot be combined with --add, --check, --reinstall, --upgrade, or --uninstall."
+    exit 1
+fi
+
 if $STATUS; then
     for role in "${ROLES[@]}"; do
         status_role "$role"
@@ -175,16 +180,18 @@ if $CHECK; then
     else
         cat > "$CHECK_STATE_FILE" << EOF
 # DO *NOT* MANUALLY EDIT THIS, THANKS!
-# IIAB does NOT currently support uninstalling apps/services.
+# IIAB installs apps/services; './runroles --uninstall' is only for roles that
+# provide the matching extended operation.
 
 EOF
     fi
     EXTRA_VARS="$EXTRA_VARS\"iiab_state_file\":\"$CHECK_STATE_FILE\","
-elif [ ! -f "$IIAB_STATE_FILE" ]; then
+elif ! $UNINSTALL && [ ! -f "$IIAB_STATE_FILE" ]; then
     echo -e "\n\e[1mCreating... $IIAB_STATE_FILE\e[0m"
     cat > "$IIAB_STATE_FILE" << EOF
 # DO *NOT* MANUALLY EDIT THIS, THANKS!
-# IIAB does NOT currently support uninstalling apps/services.
+# IIAB installs apps/services; './runroles --uninstall' is only for roles that
+# provide the matching extended operation.
 
 EOF
 fi
@@ -196,14 +203,11 @@ fi
 
 PLAYBOOK_ROLES=("${ROLES[@]}")
 if $UNINSTALL; then
-    echo -e "\e[1;31mWARNING: --uninstall removes the listed roles and may delete their data and settings.\e[0m"
-    confirm_destructive || { echo "Cancelled."; exit 1; }
-
     PLAYBOOK_ROLES=()
     found=false
     for role in "${ROLES[@]}"; do
         var=$(role_var "$role")
-        if grep -q "^${var}_" "$IIAB_STATE_FILE"; then
+        if [ -f "$IIAB_STATE_FILE" ] && grep -q "^${var}_" "$IIAB_STATE_FILE"; then
             found=true
             PLAYBOOK_ROLES+=("$role")
         else
@@ -217,6 +221,10 @@ if $UNINSTALL; then
         echo "Nothing to uninstall."
         exit 1
     fi
+
+    echo -e "\e[1;31mWARNING: --uninstall removes the listed roles and may delete their data and settings.\e[0m"
+    confirm_destructive || { echo "Cancelled."; exit 1; }
+
     backup_state_file || exit 1
     for role in "${PLAYBOOK_ROLES[@]}"; do
         var=$(role_var "$role")
@@ -231,7 +239,17 @@ if $UNINSTALL; then
     echo "Set the listed roles' '*_install: False' in $LOCAL_VARS_FILE to keep them uninstalled."
     echo
 elif $REINSTALL; then
-    if $FORCE_REINSTALL; then
+    installed=false
+    for role in "${ROLES[@]}"; do
+        var=$(role_var "$role")
+        if [ -f "$IIAB_STATE_FILE" ] && grep -q "^${var}_" "$IIAB_STATE_FILE"; then
+            installed=true
+            break
+        fi
+    done
+
+    # Only ask when this run will actually reset an existing installation.
+    if $FORCE_REINSTALL && $installed; then
         echo -e "\e[1;31mWARNING: --force-reinstall may delete the listed roles' data, caches, indexes, and settings where the roles support it.\e[0m"
         confirm_destructive || { echo "Cancelled."; exit 1; }
     fi
@@ -239,12 +257,19 @@ elif $REINSTALL; then
         echo "Use --force-reinstall to also reset dependencies, caches, indexes, and settings where the roles support it."
     fi
 
+    if $installed; then
+        backup_state_file || exit 1
+    fi
     for role in "${ROLES[@]}"; do
         var=$(role_var "$role")
-        if grep -q "^${var}_" "$IIAB_STATE_FILE"; then
+        if [ -f "$IIAB_STATE_FILE" ] && grep -q "^${var}_" "$IIAB_STATE_FILE"; then
             echo "Reinstalling $role. Deleting from $IIAB_STATE_FILE:"
             grep "^${var}_" "$IIAB_STATE_FILE" | sed 's/^/  /'
-            sed -i "/^${var}_/d" "$IIAB_STATE_FILE"
+            if ! sed -i "/^${var}_/d" "$IIAB_STATE_FILE"; then
+                echo "ERROR: could not update $IIAB_STATE_FILE." >&2
+                restore_state_file
+                exit 1
+            fi
         else
             echo "$role is not installed; it will be installed normally."
         fi
@@ -257,7 +282,7 @@ elif ! $ASSUME_YES && ! $CHECK; then
     installed=false
     for role in "${ROLES[@]}"; do
         var=$(role_var "$role")
-        if grep -q "^${var}_" "$IIAB_STATE_FILE"; then
+        if [ -f "$IIAB_STATE_FILE" ] && grep -q "^${var}_" "$IIAB_STATE_FILE"; then
             installed=true
             break
         fi
@@ -289,18 +314,13 @@ if ! $CHECK; then
     cp scripts/local_facts.fact /etc/ansible/facts.d/local_facts.fact
 fi
 
-# close the JSON object and drop the trailing comma
-if [ "$EXTRA_VARS" != "{" ]; then
-    EXTRA_VARS="${EXTRA_VARS%,}"
-    EXTRA_VARS="--extra-vars ${EXTRA_VARS}}"
-else
-    EXTRA_VARS=""
-fi
+# Close the JSON object and drop the trailing comma. skip_role_on_error is
+# always False here (matching ./runrole), so a rescued role failure cannot make
+# ./runroles exit successfully.
+EXTRA_VARS="${EXTRA_VARS%,}"
+EXTRA_VARS="--extra-vars ${EXTRA_VARS}}"
 
-CMD="ansible-playbook -i $INVENTORY $PLAYBOOK --connection=local"
-if [ -n "$EXTRA_VARS" ]; then
-    CMD="$CMD $EXTRA_VARS"
-fi
+CMD="ansible-playbook -i $INVENTORY $PLAYBOOK --connection=local $EXTRA_VARS"
 if $CHECK; then
     echo -e "\e[1;33mWARNING: --check is best-effort; not all roles are check-mode safe.\e[0m\n"
     CMD="$CMD --check --diff"
