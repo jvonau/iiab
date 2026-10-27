@@ -883,13 +883,6 @@ def operation_result(
             ok = unit in state["paths"] and (
                 service is None or service["state"] not in ACTIVE_STATES
             )
-        elif name == "installed-disabled":
-            # Already installed but disabled: the service must be stopped.
-            ok = (
-                unit in state["paths"]
-                and service is not None
-                and service["state"] not in ACTIVE_STATES
-            )
         else:
             ok = unit in state["paths"] and service and service["state"] in ACTIVE_STATES
         if not ok:
@@ -1049,12 +1042,8 @@ def run_role(role: str, vars_file: str, quiet: bool = False) -> int:
     uninstall_supported = role_supports(role, "uninstall")
     toggle_supported = role_manages_service_toggle(role)
     toggle_services = role_toggle_service_names(role)
-    # An already-installed role that is disabled should stop its service
-    # without needing to be reinstalled first.
-    if toggle_supported:
-        operations.append(("installed-disabled", {"installed": True, "enabled": False}))
-    else:
-        skipped.append("installed-disabled")
+    # An already-installed role that is disabled is covered by the 'disabled'
+    # phase of the toggle scenario below, so it is not run separately.
     if role_supports(role, "force_reinstall"):
         operations.extend(
             [
@@ -1130,6 +1119,16 @@ def run_role(role: str, vars_file: str, quiet: bool = False) -> int:
     return failures
 
 
+def parse_shard(value: str) -> tuple[int, int]:
+    match = re.fullmatch(r"(\d+)/(\d+)", value.strip())
+    if not match:
+        raise argparse.ArgumentTypeError("expected INDEX/TOTAL, e.g. 1/4")
+    index, total = int(match.group(1)), int(match.group(2))
+    if total < 1 or not 1 <= index <= total:
+        raise argparse.ArgumentTypeError("INDEX must be between 1 and TOTAL")
+    return index, total
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("role", nargs="?")
@@ -1140,31 +1139,58 @@ def main() -> int:
         dest="all_roles",
         help="test every active role and print only failures",
     )
+    parser.add_argument(
+        "--shard",
+        type=parse_shard,
+        metavar="INDEX/TOTAL",
+        help="with --all, test only one shard of roles (e.g. 1/4) for CI parallelism",
+    )
     parser.add_argument("--quiet", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     if shutil.which("ansible-playbook") is None:
         parser.error("ansible-playbook is required")
 
+    if args.shard and not args.all_roles:
+        parser.error("--shard requires --all")
+
     if args.all_roles:
         if args.role or args.vars_file:
             parser.error("--all does not accept a role or vars file")
-        failures = 0
-        for role in available_roles():
-            result = subprocess.run(
-                [sys.executable, str(Path(__file__).resolve()), role, "--quiet"],
-                cwd=ROOT_DIR,
-                text=True,
-                capture_output=True,
-                check=False,
+        all_roles = available_roles()
+        roles = all_roles
+        if args.shard:
+            index, total = args.shard
+            roles = all_roles[index - 1 :: total]
+            print(
+                f"Shard {index}/{total}: {len(roles)} of {len(all_roles)} roles",
+                file=sys.stderr,
             )
-            if result.returncode:
-                failures = 1
-                print(f"ERROR: {role}", file=sys.stderr)
-                if result.stdout:
-                    print(result.stdout, end="", file=sys.stderr)
-                if result.stderr:
-                    print(result.stderr, end="", file=sys.stderr)
+        if not roles:
+            return 0
+        failures = 0
+        workers = min(8, len(roles), os.cpu_count() or 1)
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                role: executor.submit(
+                    subprocess.run,
+                    [sys.executable, str(Path(__file__).resolve()), role, "--quiet"],
+                    cwd=ROOT_DIR,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                for role in roles
+            }
+            for role in roles:
+                result = futures[role].result()
+                if result.returncode:
+                    failures = 1
+                    print(f"ERROR: {role}", file=sys.stderr)
+                    if result.stdout:
+                        print(result.stdout, end="", file=sys.stderr)
+                    if result.stderr:
+                        print(result.stderr, end="", file=sys.stderr)
         return failures
     if not args.role:
         parser.error("a role is required unless --all is used")
