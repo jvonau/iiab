@@ -174,18 +174,19 @@ def module_args():
             text = args_file.read()
         if text.startswith("{"):
             return json.loads(text).get("ANSIBLE_MODULE_ARGS", {})
-        raw_match = re.search(
-            r"_raw_params=(.*?)(?=\s+[A-Za-z_][A-Za-z0-9_]*=|\s+_ansible_|$)",
-            text,
-        )
+        # Ansible writes some argument files as shell-like key=value text
+        # (e.g. command with cmd/creates), where values may be quoted and
+        # contain spaces. Shlex keeps those values intact; the previous regex
+        # stopped at the first space and truncated commands such as pip install.
+        try:
+            tokens = shlex.split(text)
+        except ValueError:
+            tokens = text.split()
         args = {}
-        if raw_match:
-            args["_raw_params"] = decode(raw_match.group(1))
-            text = text[raw_match.end() :]
-        for key, value in re.findall(
-            r"(?:^|\s)([A-Za-z_][A-Za-z0-9_]*)=([^\s]+)", text
-        ):
-            args[key] = decode(value)
+        for token in tokens:
+            key, separator, value = token.partition("=")
+            if separator and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                args[key] = decode(value)
         return args
     return {}
 
@@ -354,7 +355,7 @@ def main():
             if name == "template" and path.startswith("/etc/systemd/system/"):
                 for service in state.get("expected_services", []):
                     changed = create(state, unit_path(service)) or changed
-        finish(state, changed=changed, path=path)
+        finish(state, changed=changed, path=path, dest=path)
 
     if name in {"group", "user"}:
         finish(state, changed=False)
@@ -374,7 +375,6 @@ def main():
         "get_url",
         "mount",
         "sysctl",
-        "uri",
         "mariadb_db",
         "mariadb_user",
         "postgresql_db",
@@ -384,6 +384,17 @@ def main():
 
     if name in {"command", "shell"}:
         command_result(state, args)
+
+    if name == "uri":
+        status = 302 if str(args.get("method", "GET")).upper() == "POST" else 200
+        finish(
+            state,
+            changed=False,
+            status=status,
+            url=args.get("url", ""),
+            attempts=1,
+            cookies={"MATOMO_SESSID": "mock"},
+        )
 
     if name in {"systemd", "systemd_service", "service"}:
         if not args.get("name"):
@@ -1099,7 +1110,7 @@ def create_mock_library(directory: Path) -> Path:
     module.chmod(0o755)
     actions = directory / "actions"
     actions.mkdir()
-    for name in ("copy", "template"):
+    for name in ("copy", "template", "unarchive"):
         action = actions / f"{name}.py"
         action.write_text(MOCK_ACTION_SOURCE, encoding="utf-8")
     (actions / "pause.py").write_text(MOCK_PAUSE_ACTION_SOURCE, encoding="utf-8")
@@ -1121,6 +1132,8 @@ def create_mock_library(directory: Path) -> Path:
         "unarchive",
         "get_url",
         "uri",
+        "cron",
+        "pip",
         "mount",
         "sysctl",
         "command",
