@@ -5,7 +5,18 @@
 #   update.yml     the only phase that installs packages or downloads Matomo
 #   install.yml    offline-safe install/repair of the local database and services
 #   configure.yml  always runs; NGINX, the one-time web installer, and settings
+#   uninstall.yml  cleanup for --uninstall
 #   state.yml      records the reported settings in iiab.ini
+
+# './runrole --uninstall matomo' removes the role instead of applying it, so
+# skip install-time validation and end the role once cleanup is done.
+- name: Uninstall Matomo
+  include_tasks: uninstall.yml
+  when: uninstall
+
+- name: Stop processing Matomo after uninstall
+  meta: end_role
+  when: uninstall
 
 - name: Validate Matomo settings
   import_tasks: validate.yml

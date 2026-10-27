@@ -1,0 +1,107 @@
+---
+# Included only when 'uninstall' is set.
+#
+# Remove the Matomo application, its configuration, the NGINX shortcut, the
+# ingestion cron jobs, and the role's database and user. Shared packages such
+# as MariaDB and the PHP extensions are left in place.
+#
+# The database cleanup is skipped when the MySQL state marker is unavailable,
+# so an uninstall still completes offline on a partially configured host.
+
+- name: Remove the Matomo NGINX shortcut
+  file:
+    path: "{{ nginx_conf_dir }}/matomo-nginx.conf"
+    state: absent
+  notify:
+    - Reload nginx
+    - Reload nginx via pdsm
+
+- name: Remove the Matomo application
+  file:
+    path: "{{ matomo_path }}/matomo"
+    state: absent
+
+- name: Remove the downloaded Matomo archive
+  file:
+    path: "{{ downloads_dir }}/matomo.tar.gz"
+    state: absent
+
+- name: Remove the Matomo ingestion cron jobs
+  cron:
+    name: "{{ item.name }}"
+    cron_file: "{{ item.cron_file }}"
+    state: absent
+  with_items:
+    - name: MatomoDataIngestionOnReboot
+      cron_file: matomo_reboot
+    - name: DailyMatomoDataIngestion
+      cron_file: matomo_daily
+
+- name: Start MariaDB before removing the Matomo database
+  systemd:
+    name: "{{ mysql_service }}"
+    state: started
+  when:
+    - not is_proot
+    - mysql_installed is defined
+
+- name: Start MariaDB via pdsm before removing the Matomo database (proot)
+  command: pdsm start mariadb
+  when:
+    - is_proot
+    - mysql_installed is defined
+
+- name: Remove the Matomo database
+  ansible.mariadb.mariadb_db:
+    name: "{{ matomo_db_name }}"
+    state: absent
+  when:
+    - not is_proot
+    - mysql_installed is defined
+
+- name: Remove the Matomo database user
+  ansible.mariadb.mariadb_user:
+    name: "{{ matomo_db_user }}"
+    state: absent
+  when:
+    - not is_proot
+    - mysql_installed is defined
+
+- name: Remove the Matomo database and user (proot)
+  when:
+    - is_proot
+    - mysql_installed is defined
+  block:
+
+    - name: Remove the Matomo database (proot)
+      ansible.mariadb.mariadb_db:
+        name: "{{ matomo_db_name }}"
+        state: absent
+        login_unix_socket: "{{ mariadb_run_dir }}/mysqld.sock"
+
+    - name: Remove the Matomo database user (proot)
+      ansible.mariadb.mariadb_user:
+        name: "{{ matomo_db_user }}"
+        state: absent
+        login_unix_socket: "{{ mariadb_run_dir }}/mysqld.sock"
+
+- name: Remove Matomo entries from {{ iiab_state_file }}
+  lineinfile:
+    path: "{{ iiab_state_file }}"
+    regexp: '^matomo_'
+    state: absent
+  when: iiab_state_file is file
+
+- name: Record that Matomo is uninstalled in {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"
+    section: matomo
+    option: matomo_install
+    value: "False"
+
+- name: Record that Matomo is disabled in {{ iiab_ini_file }}
+  ini_file:
+    path: "{{ iiab_ini_file }}"
+    section: matomo
+    option: matomo_enabled
+    value: "False"

@@ -8,11 +8,8 @@ work outside update.yml, and offline phases that include a network phase.
 from __future__ import annotations
 
 import argparse
-import ast
-import copy
 import json
 import os
-import posixpath
 import re
 import shutil
 import subprocess
@@ -23,7 +20,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import yaml
-
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 ACTIVE_STATES = {"started", "restarted", "reloaded"}
@@ -592,6 +588,7 @@ def initial_state(role: str, installed: bool = False) -> dict:
             "postgresql-iiab",
             "ssh",
             "systemd-resolved",
+            "transmission-daemon",    # provided by the transmission-daemon package
             "networking",
             "wpa_supplicant",
             "uwsgi-app@captiveportal.socket",

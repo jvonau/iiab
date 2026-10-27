@@ -6,7 +6,18 @@
 #   install.yml        offline-safe install/repair
 #   configure.yml      always runs; Transmission settings
 #   enable-or-disable.yml  service state and optional torrent provisioning
+#   uninstall.yml      cleanup for --uninstall
 #   state.yml          records the reported settings in iiab.ini
+
+# './runrole --uninstall transmission' removes the role instead of applying it,
+# so skip install-time validation and end the role once cleanup is done.
+- name: Uninstall Transmission
+  include_tasks: uninstall.yml
+  when: uninstall
+
+- name: Stop processing Transmission after uninstall
+  meta: end_role
+  when: uninstall
 
 - name: Validate Transmission settings
   import_tasks: validate.yml

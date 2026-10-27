@@ -5,7 +5,18 @@
 #   update.yml     the only phase that installs the package
 #   install.yml    offline-safe install/repair
 #   configure.yml  always runs; configuration and the NGINX shortcut
+#   uninstall.yml  cleanup for --uninstall
 #   state.yml      records the reported settings in iiab.ini
+
+# './runrole --uninstall awstats' removes the role instead of applying it, so
+# skip install-time validation and end the role once cleanup is done.
+- name: Uninstall AWStats
+  include_tasks: uninstall.yml
+  when: uninstall
+
+- name: Stop processing AWStats after uninstall
+  meta: end_role
+  when: uninstall
 
 - name: Validate AWStats settings
   import_tasks: validate.yml
