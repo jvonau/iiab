@@ -94,6 +94,21 @@ optional `roles/<role>/meta/runrole.yml` can still opt in:
     upgrade: true
     force_reinstall: true
 
+`scripts/test-role-lifecycle.py` scans these task files and prints `WARN` lines
+with the file, line, and task name whenever a phase does network work that
+belongs in `update.yml` — for example a `get_url` in `install.yml`, a package
+install in `main.yml`, or an `include_tasks: update.yml` from `uninstall.yml`.
+`main.yml` including `update.yml`, `uninstall.yml`, or `reinstall.yml` without a
+`when:` guard is also reported. `configure.yml` may still fetch a missing
+immutable asset; program checkouts and dependency installs there are reported.
+The warnings do not fail the test, and are expected to be noisy while roles
+adopt the layout incrementally.
+
+The scanner cannot evaluate Ansible variables or `when:` conditions. A task
+that must use the network in an offline phase can carry a
+`# lifecycle: allow-network <reason>` comment immediately above it (or on its
+first line). Use it only for the documented exceptions, and say why.
+
 `--add` (`-a`) overrides `*_install: False` for that invocation only and does
 not change `local_vars.yml`. Normal runs do not prompt; `--uninstall` and
 `--clean-install` ask for `yes` unless `-y` is given (and only when there is

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Run role lifecycle scenarios against a virtual Ansible environment."""
+"""Run role lifecycle scenarios against a virtual Ansible environment.
+
+Besides the scenarios, task files are scanned for lifecycle warnings: network
+work outside update.yml, and offline phases that include a network phase.
+"""
 
 from __future__ import annotations
 
@@ -18,10 +22,133 @@ import textwrap
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import yaml
+
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 ACTIVE_STATES = {"started", "restarted", "reloaded"}
 BASELINE_SERVICES = {"nginx", "dnsmasq"}
+
+# Task files defined by the "Role task lifecycle" section of README.md. Only
+# these need phase-aware checks; helper files are reached through them.
+LIFECYCLE_FILES = {
+    "main",
+    "validate",
+    "uninstall",
+    "reinstall",
+    "update",
+    "install",
+    "configure",
+    "state",
+    "enable-or-disable",
+}
+
+# update.yml is the only phase allowed to fetch a new program version or
+# refresh package metadata.
+NETWORK_PHASES = {"update"}
+# configure.yml may fetch a missing immutable asset (model, checksummed
+# archive), but program and dependency installs belong in update.yml.
+ASSET_FETCH_PHASES = {"configure"}
+
+PACKAGE_MODULES = {"apt", "apk", "dnf", "package", "pacman", "yum", "zypper"}
+INSTALLER_MODULES = {"composer", "gem", "npm", "pnpm", "pip", "pip3", "snap", "yarn"}
+SHELL_MODULES = {"command", "raw", "shell"}
+INCLUDE_MODULES = {"include", "include_tasks", "import_tasks"}
+
+LIFECYCLE_DIRECTIVE = re.compile(
+    r"#\s*lifecycle:\s*(?P<rule>allow-network)\b", re.IGNORECASE
+)
+
+NETWORK_COMMAND = re.compile(
+    r"(?:^|[\s;&|(`])(?:"
+    r"curl|wget|"
+    r"git\s+(?:clone|fetch|ls-remote|pull|submodule\s+update)|"
+    r"(?:python[0-9.]*\s+-m\s+)?pip[0-9.]*\s+(?:download|install|wheel)|"
+    r"(?:apt|apt-get|aptitude)\s+(?:build-dep|dist-upgrade|install|reinstall|update|upgrade)|"
+    r"(?:dnf|yum)\s+(?:install|makecache|update|upgrade)|"
+    r"zypper\s+(?:install|refresh|update|up)|"
+    r"pacman\s+-S|"
+    r"(?:npm|pnpm|yarn)\s+(?:add|ci|install|update)|"
+    r"(?:gem|snap)\s+(?:install|refresh|update)"
+    r")\b",
+    re.IGNORECASE,
+)
+
+LIFECYCLE_HINTS = {
+    "main": "tasks/main.yml should only validate and dispatch; move the network work to update.yml",
+    "validate": "validate.yml must not use the network; move the fetch to update.yml",
+    "uninstall": "uninstall.yml must work offline; move the fetch to update.yml",
+    "reinstall": "reinstall.yml must work offline; move the fetch to update.yml",
+    "install": "install.yml must stay offline-safe; move the fetch to update.yml",
+    "configure": "configure.yml may only fetch a missing immutable asset; move program and dependency installs to update.yml",
+    "state": "state.yml only records settings; move the fetch to update.yml",
+    "enable-or-disable": "enable-or-disable.yml only toggles services; move the fetch to update.yml",
+}
+
+# Phases that main.yml must only include conditionally.
+GATED_PHASES = {
+    "uninstall": "uninstall.yml must only run when uninstall is set; add a when: guard",
+    "reinstall": "reinstall.yml must only run for --reinstall or --force-reinstall; add a when: guard",
+    "update": "update.yml only runs on first install, a version change, --upgrade, or --force-reinstall; add a when: guard",
+}
+
+TASK_KEYWORDS = {
+    "__line__",
+    "action",
+    "always",
+    "any_errors_fatal",
+    "args",
+    "async",
+    "become",
+    "become_exe",
+    "become_flags",
+    "become_method",
+    "become_user",
+    "block",
+    "changed_when",
+    "check_mode",
+    "collections",
+    "connection",
+    "debugger",
+    "delay",
+    "delegate_facts",
+    "delegate_to",
+    "diff",
+    "environment",
+    "failed_when",
+    "ignore_errors",
+    "ignore_unreachable",
+    "listen",
+    "local_action",
+    "loop",
+    "loop_control",
+    "module_defaults",
+    "name",
+    "no_log",
+    "notify",
+    "poll",
+    "port",
+    "register",
+    "remote_user",
+    "rescue",
+    "retries",
+    "run_once",
+    "tags",
+    "throttle",
+    "timeout",
+    "until",
+    "vars",
+    "when",
+    "with_dict",
+    "with_fileglob",
+    "with_first_found",
+    "with_flattened",
+    "with_items",
+    "with_nested",
+    "with_sequence",
+    "with_subelements",
+    "with_together",
+}
 MOCK_MODULE_SOURCE = r'''#!/usr/bin/python3
 import ast
 import copy
@@ -531,6 +658,263 @@ def role_service_names_from_files(paths) -> set[str]:
                     services.add(match.group(1).removesuffix(".service"))
                     break
     return services
+
+
+class _LifecycleLoader(yaml.SafeLoader):
+    pass
+
+
+def _construct_mapping(loader, node):
+    # Keep the source line so warnings can point at the exact task.
+    data = yaml.SafeLoader.construct_mapping(loader, node)
+    data["__line__"] = node.start_mark.line + 1
+    return data
+
+
+_LifecycleLoader.add_constructor(
+    _LifecycleLoader.DEFAULT_MAPPING_TAG, _construct_mapping
+)
+
+
+def load_task_file(path: Path, text: str | None = None):
+    if text is None:
+        text = path.read_text(encoding="utf-8")
+    return yaml.load(text, Loader=_LifecycleLoader)
+
+
+def lifecycle_directives(lines: list[str], line: int | None) -> set[str]:
+    """Collect ``# lifecycle: ...`` directives for a task.
+
+    A directive may be on the task's first line or in the comment block
+    directly above it. Blank lines end the block.
+    """
+    if line is None or not 1 <= line <= len(lines):
+        return set()
+    candidates = [lines[line - 1]]
+    index = line - 2
+    while index >= 0 and lines[index].lstrip().startswith("#"):
+        candidates.append(lines[index])
+        index -= 1
+    return {
+        match.group("rule").lower()
+        for candidate in candidates
+        for match in LIFECYCLE_DIRECTIVE.finditer(candidate)
+    }
+
+
+def task_arg(args, name: str, default=None):
+    if isinstance(args, dict):
+        return args.get(name, default)
+    if isinstance(args, str):
+        match = re.search(
+            rf"(?:^|\s){re.escape(name)}=(\"[^\"]*\"|'[^']*'|\S+)", args
+        )
+        if match:
+            return match.group(1).strip("\"'")
+    return default
+
+
+def is_true(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "on", "true", "yes"}
+
+
+def task_command(task: dict, args) -> str:
+    if isinstance(args, str):
+        return args
+    command = task_arg(args, "cmd") or task_arg(args, "_raw_params")
+    task_args = task.get("args")
+    if not command and isinstance(task_args, dict):
+        command = task_args.get("cmd", "")
+    return str(command or "")
+
+
+def network_action(module: str, args, task: dict) -> tuple[str, str] | None:
+    """Return (kind, description) for a task that uses the network.
+
+    ``kind`` lets configure.yml accept fetching an immutable asset while still
+    rejecting program checkouts and dependency installs.
+    """
+    module = module.rsplit(".", 1)[-1]
+
+    if module in {"get_url", "get_curl"}:
+        return "asset", "downloads a file"
+    if module == "git":
+        return "checkout", "fetches a git checkout"
+    if module == "unarchive":
+        src = str(task_arg(args, "src", ""))
+        if is_true(task_arg(args, "remote_src")) or re.match(
+            r"^(?:ftp|https?)://", src
+        ):
+            return "asset", "downloads and extracts an archive"
+        return None
+    if module == "uri":
+        url = task_arg(args, "url", "a remote host")
+        if task_arg(args, "dest"):
+            return "asset", f"downloads {url}"
+        return "asset", f"makes an HTTP request to {url}"
+    if module in {"apt_key", "apt_repository"}:
+        if str(task_arg(args, "state", "present")).lower() != "absent":
+            return "metadata", f"fetches {module} metadata"
+        return None
+    if module in PACKAGE_MODULES:
+        state = str(task_arg(args, "state", "present")).lower()
+        if state in {"absent", "removed", "purged"}:
+            return None
+        name = task_arg(args, "name") or task_arg(args, "pkg")
+        if module == "apt" and is_true(task_arg(args, "update_cache")) and not name:
+            return "install", "refreshes the apt cache"
+        if module == "apt" and task_arg(args, "upgrade"):
+            return "install", "upgrades apt packages"
+        if module == "package":
+            return "install", "installs system packages"
+        if state == "latest":
+            return "install", f"installs or upgrades {module} packages"
+        return "install", f"installs {module} packages"
+    if module in INSTALLER_MODULES:
+        state = str(task_arg(args, "state", "present")).lower()
+        if state not in {"absent", "removed", "purged"}:
+            return "install", f"installs {module} packages"
+        return None
+    if module in SHELL_MODULES:
+        command = task_command(task, args)
+        match = NETWORK_COMMAND.search(command)
+        if match:
+            word = match.group(0).strip().split()[0].lower()
+            if word in {"curl", "wget"}:
+                kind = "asset"
+            elif word == "git":
+                kind = "checkout"
+            else:
+                kind = "install"
+            return kind, f"runs `{match.group(0).strip()}` (network)"
+        return None
+    return None
+
+
+def included_phase(module: str, args) -> str | None:
+    if module.rsplit(".", 1)[-1] not in INCLUDE_MODULES:
+        return None
+    value = task_arg(args, "file") or task_arg(args, "_raw_params")
+    if not value and isinstance(args, str):
+        value = args
+    if not value:
+        return None
+    stem = Path(str(value)).stem
+    return stem if stem in LIFECYCLE_FILES else None
+
+
+def walk_tasks(items, guarded: bool = False):
+    if not isinstance(items, list):
+        return
+    for task in items:
+        if not isinstance(task, dict):
+            continue
+        task_guarded = guarded or "when" in task
+        yield task, task_guarded
+        for block_key in ("block", "rescue", "always"):
+            yield from walk_tasks(task.get(block_key), task_guarded)
+
+
+def task_modules(task: dict) -> list[tuple[str, object]]:
+    return [
+        (key, value)
+        for key, value in task.items()
+        if key not in TASK_KEYWORDS and not str(key).startswith("with_")
+    ]
+
+
+def format_lifecycle_warning(
+    path: Path, line: int | None, task: dict, message: str
+) -> str:
+    location = str(path.relative_to(ROOT_DIR))
+    if line is not None:
+        location += f":{line}"
+    name = re.sub(r"\s+", " ", str(task.get("name", ""))).strip()
+    if len(name) > 90:
+        name = name[:87] + "..."
+    label = f" [{name}]" if name else ""
+    if len(message) > 160:
+        message = message[:157] + "..."
+    return f"  WARN {location}{label}: {message}\n"
+
+
+def lifecycle_warnings(role: str) -> list[str]:
+    """Warn when a task file does work that belongs in another phase."""
+    tasks_dir = ROOT_DIR / "roles" / role / "tasks"
+    warnings = []
+    paths = sorted(
+        set(tasks_dir.glob("*.yml")) | set(tasks_dir.glob("*.yaml"))
+    )
+    for path in paths:
+        phase = path.stem
+        if phase not in LIFECYCLE_FILES:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+            tasks = load_task_file(path, text)
+        except (OSError, UnicodeDecodeError, yaml.YAMLError) as error:
+            warnings.append(
+                f"  WARN {path.relative_to(ROOT_DIR)}: could not read or parse "
+                f"task file for lifecycle checks ({error.__class__.__name__})\n"
+            )
+            continue
+        lines = text.splitlines()
+        for task, guarded in walk_tasks(tasks):
+            line = task.get("__line__")
+            if "allow-network" in lifecycle_directives(lines, line):
+                # Deliberate exception, explained next to the task.
+                continue
+            for module, args in task_modules(task):
+                network = network_action(module, args, task)
+                if network:
+                    kind, action = network
+                    if phase in NETWORK_PHASES:
+                        continue
+                    if phase in ASSET_FETCH_PHASES and kind == "asset":
+                        continue
+                    warnings.append(
+                        format_lifecycle_warning(
+                            path,
+                            line,
+                            task,
+                            f"{module} {action}; {LIFECYCLE_HINTS[phase]}",
+                        )
+                    )
+
+                included = included_phase(module, args)
+                if not included or included == phase:
+                    continue
+                # main.yml is supposed to dispatch to these phases; every
+                # other offline phase including them can pull in the network.
+                if phase == "main":
+                    if included in GATED_PHASES and not guarded:
+                        warnings.append(
+                            format_lifecycle_warning(
+                                path,
+                                line,
+                                task,
+                                f"includes {included}.yml unconditionally; "
+                                f"{GATED_PHASES[included]}",
+                            )
+                        )
+                    continue
+                if phase == "configure":
+                    suspicious = {"install", "update"}
+                else:
+                    suspicious = {"configure", "install", "update"}
+                if included in suspicious:
+                    warnings.append(
+                        format_lifecycle_warning(
+                            path,
+                            line,
+                            task,
+                            f"includes {included}.yml, which may use the network; "
+                            f"{LIFECYCLE_HINTS[phase]}",
+                        )
+                    )
+    return warnings
 
 
 def prepare_controller_files(scenario: Path) -> None:
@@ -1067,6 +1451,12 @@ def run_role(role: str, vars_file: str, quiet: bool = False) -> int:
 
     if not quiet:
         print(f"Testing {role} lifecycle with mocked filesystem, services, and processes...")
+    warnings = lifecycle_warnings(role)
+    if warnings:
+        print(f"  lifecycle warnings: {len(warnings)}")
+        for warning in warnings:
+            print(warning, end="")
+    if not quiet:
         for name in skipped:
             print(f"  {name:<19} SKIP (unsupported)")
 
@@ -1137,7 +1527,7 @@ def main() -> int:
         "--all",
         action="store_true",
         dest="all_roles",
-        help="test every active role and print only failures",
+        help="test every active role and print lifecycle warnings and failures",
     )
     parser.add_argument(
         "--shard",
@@ -1191,6 +1581,9 @@ def main() -> int:
                         print(result.stdout, end="", file=sys.stderr)
                     if result.stderr:
                         print(result.stderr, end="", file=sys.stderr)
+                elif result.stdout:
+                    # Quiet mode only prints lifecycle warnings for a passing role.
+                    print(result.stdout, end="")
         return failures
     if not args.role:
         parser.error("a role is required unless --all is used")
