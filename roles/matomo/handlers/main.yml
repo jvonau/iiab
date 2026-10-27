@@ -1,0 +1,10 @@
+---
+- name: Reload nginx
+  systemd:
+    name: nginx
+    state: reloaded
+  when: not is_proot
+
+- name: Reload nginx via pdsm
+  command: pdsm restart nginx
+  when: is_proot

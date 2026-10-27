@@ -1,0 +1,18 @@
+---
+# Input validation. Runs on every apply; it never uses the network.
+
+# We assume 0-init/tasks/validate_vars.yml has DEFINITELY been run, so no need
+# to re-check whether vars are defined here.  As Ansible vars cannot be unset:
+# https://serverfault.com/questions/856729/how-to-destroy-delete-unset-a-variable-value-in-ansible
+
+- name: Assert that "awstats_install is sameas true" (boolean not string etc)
+  assert:
+    that: awstats_install is sameas true
+    fail_msg: "PLEASE SET 'awstats_install: True' e.g. IN: /etc/iiab/local_vars.yml"
+    quiet: yes
+
+- name: Assert that "awstats_enabled | type_debug == 'bool'" (boolean not string etc)
+  assert:
+    that: awstats_enabled | type_debug == 'bool'
+    fail_msg: "PLEASE GIVE VARIABLE 'awstats_enabled' A PROPER (UNQUOTED) ANSIBLE BOOLEAN VALUE e.g. IN: /etc/iiab/local_vars.yml"
+    quiet: yes

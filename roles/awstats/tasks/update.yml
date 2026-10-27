@@ -1,0 +1,8 @@
+---
+# Network phase. main.yml includes this only on first install, so an ordinary
+# apply never refreshes package metadata or fetches anything.
+
+- name: Install awstats package
+  package:
+    name: awstats
+    state: present
