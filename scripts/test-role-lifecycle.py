@@ -342,6 +342,29 @@ class ActionModule(ActionBase):
         return result
 '''
 
+MOCK_PAUSE_ACTION_SOURCE = r'''from __future__ import annotations
+
+from ansible.plugins.action import ActionBase
+
+
+class ActionModule(ActionBase):
+    """Return immediately instead of sleeping (roles pause for emphasis)."""
+
+    def run(self, tmp=None, task_vars=None):
+        result = super().run(tmp, task_vars)
+        result.update(
+            changed=False,
+            delta=0,
+            echo=True,
+            rc=0,
+            start="",
+            stop="",
+            stdout="Paused for 0.0 minutes",
+            user_input="",
+        )
+        return result
+'''
+
 
 def role_var(role: str) -> str:
     return {
@@ -698,6 +721,7 @@ def create_mock_library(directory: Path) -> Path:
     for name in ("copy", "template"):
         action = actions / f"{name}.py"
         action.write_text(MOCK_ACTION_SOURCE, encoding="utf-8")
+    (actions / "pause.py").write_text(MOCK_PAUSE_ACTION_SOURCE, encoding="utf-8")
     names = {
         "stat",
         "file",
