@@ -52,7 +52,7 @@
     - /usr/share/munin/plugins/mysql_queries
     - /usr/share/munin/plugins/mysql_slowqueries
     - /usr/share/munin/plugins/mysql_threads
-  when: mysql_installed
+  when: mysql_installed is defined and mysql_installed
   #when: mysql_enabled
 
 

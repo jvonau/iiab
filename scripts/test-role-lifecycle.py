@@ -25,6 +25,14 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 ACTIVE_STATES = {"started", "restarted", "reloaded"}
 BASELINE_SERVICES = {"nginx", "dnsmasq"}
 
+# Services supplied by a package but referenced through a loop or a computed
+# variable that role_service_names() cannot resolve statically.
+ROLE_EXTRA_SERVICES = {
+    "cups": {"cups", "cups-browsed"},
+    "luanti": {"luanti-server", "minetest-server"},
+    "samba": {"smbd", "nmbd"},
+}
+
 # Task files defined by the "Role task lifecycle" section of README.md. Only
 # these need phase-aware checks; helper files are reached through them.
 LIFECYCLE_FILES = {
@@ -273,8 +281,20 @@ def command_result(state, args):
     if creates:
         create(state, creates)
 
-    if "systemctl" in command or re.search(r"(^|\s)service\s", command):
+    try:
         words = shlex.split(command)
+    except ValueError:
+        words = command.split()
+
+    # Simulate the download destinations of the common command-line fetchers.
+    if words and words[0] in {"wget", "curl"}:
+        for flag in ("-O", "--output-document", "-o", "--output"):
+            if flag in words:
+                index = words.index(flag)
+                if index + 1 < len(words):
+                    create(state, words[index + 1])
+
+    if "systemctl" in command or re.search(r"(^|\s)service\s", command):
         actions = {
             "start": "started",
             "restart": "restarted",
@@ -331,6 +351,8 @@ def main():
             stat={
                 "exists": exists(state, path) or installed,
                 "isdir": state["paths"].get(path) == "directory",
+                "size": 0,
+                "islnk": False,
             },
         )
 
@@ -340,13 +362,29 @@ def main():
         "copy",
         "get_curl",
         "lineinfile",
+        "blockinfile",
+        "replace",
         "ini_file",
     }:
-        path = args.get("path") or args.get("dest")
+        path = args.get("path") or args.get("dest") or args.get("name")
         if not path:
             fail(state, f"{name} mock needs a path or destination")
         if name in {"template", "copy"} and path.endswith("/"):
             path = posixpath.join(path, posixpath.basename(args.get("src", "")))
+        if name == "get_curl" and args.get("url"):
+            url_name = posixpath.basename(str(args["url"]).split("?")[0])
+            dest_is_dir = path.endswith("/") or state["paths"].get(path) == "directory"
+            if (
+                not dest_is_dir
+                and url_name
+                and not posixpath.splitext(path.rstrip("/"))[1]
+            ):
+                dest_is_dir = True
+            if dest_is_dir:
+                dest_dir = path.rstrip("/")
+                if dest_dir:
+                    create(state, dest_dir, "directory")
+                path = posixpath.join(path, url_name)
         if args.get("state") == "absent":
             changed = remove(state, path)
         else:
@@ -366,13 +404,36 @@ def main():
         create(state, posixpath.join(destination, ".git"), "directory")
         finish(state, changed=True, after="mock-commit")
 
+    if name == "get_url":
+        dest = args.get("dest") or args.get("path")
+        url = str(args.get("url", ""))
+        url_name = posixpath.basename(url.split("?")[0])
+        dest_is_dir = bool(dest) and (
+            dest.endswith("/") or state["paths"].get(dest) == "directory"
+        )
+        if (
+            dest
+            and not dest_is_dir
+            and url_name
+            and not posixpath.splitext(dest.rstrip("/"))[1]
+        ):
+            dest_is_dir = True
+        if dest and dest_is_dir:
+            dest_dir = dest.rstrip("/")
+            if dest_dir:
+                create(state, dest_dir, "directory")
+            if url_name:
+                dest = posixpath.join(dest, url_name)
+        if dest:
+            create(state, dest)
+        finish(state, changed=False, dest=dest)
+
     if name in {
         "apt",
         "dnf",
         "yum",
         "package",
         "unarchive",
-        "get_url",
         "mount",
         "sysctl",
         "mariadb_db",
@@ -474,6 +535,87 @@ class ActionModule(ActionBase):
             json.dump(state, stream)
         result.update(changed=changed, path=path)
         return result
+'''
+
+MOCK_INCLUDE_VARS_ACTION_SOURCE = r'''from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import yaml
+
+from ansible.plugins.action import ActionBase
+
+
+def load_data(path: Path):
+    text = path.read_text(encoding="utf-8")
+    if path.suffix == ".json":
+        return json.loads(text)
+    return yaml.safe_load(text)
+
+
+class ActionModule(ActionBase):
+    def run(self, tmp=None, task_vars=None):
+        result = super().run(tmp, task_vars)
+        args = self._task.args
+        filename = args.get("file")
+        name = args.get("name")
+        data = {}
+        if filename:
+            path = Path(filename)
+            if path.is_file():
+                data = load_data(path)
+            else:
+                # Mock downloads live in IIAB_MOCK_STATE, not on disk. Fall
+                # back to a real data file shipped alongside the role.
+                role = getattr(self._task, "_role", None)
+                role_path = Path(getattr(role, "_role_path", "."))
+                candidates = []
+                if role_path.is_dir():
+                    candidates.extend(sorted(role_path.glob("*.json")))
+                    candidates.extend(sorted((role_path / "files").glob("*.json")))
+                for candidate in candidates:
+                    if candidate.is_file():
+                        data = load_data(candidate)
+                        break
+        if name:
+            result["ansible_facts"] = {name: data}
+        elif isinstance(data, dict):
+            result["ansible_facts"] = data
+        result["changed"] = False
+        result["ansible_included_var_files"] = []
+        return result
+'''
+
+MOCK_NORMAL_ACTION_SOURCE = r'''from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+
+import ansible
+
+
+def _load_builtin_normal():
+    path = Path(ansible.__file__).parent / "plugins" / "action" / "normal.py"
+    spec = importlib.util.spec_from_file_location("_iiab_builtin_normal", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.ActionModule
+
+
+class ActionModule(_load_builtin_normal()):
+    """Resolve ansible.builtin.* modules through the mock library.
+
+    Ansible's builtin collection is synthetic, so a local ansible.builtin
+    collection cannot override it. Stripping the prefix lets the normal
+    action find the legacy module name, which ANSIBLE_LIBRARY points at the
+    lifecycle mock.
+    """
+
+    def run(self, tmp=None, task_vars=None):
+        if self._task.action.startswith("ansible.builtin."):
+            self._task.action = self._task.action.rsplit(".", 1)[-1]
+        return super().run(tmp=tmp, task_vars=task_vars)
 '''
 
 MOCK_PAUSE_ACTION_SOURCE = r'''from __future__ import annotations
@@ -582,29 +724,38 @@ def role_service_names(role: str) -> set[str]:
 
 
 def initial_state(role: str, installed: bool = False) -> dict:
+    role_services = sorted(
+        role_service_names(role) | ROLE_EXTRA_SERVICES.get(role, set())
+    )
+    available_services = [
+        "nginx",
+        "dnsmasq",
+        "apache2",
+        "avahi-daemon",
+        "hostapd",
+        "hostapd.service",
+        "iiab-clone-wifi.service",
+        "mariadb",
+        "php8.2-fpm",
+        "postgresql",
+        "postgresql-iiab",
+        "ssh",
+        "systemd-resolved",
+        "networking",
+        "wpa_supplicant",
+        "uwsgi-app@captiveportal.socket",
+        "uwsgi-app@captiveportal.service",
+    ]
+    # A fresh install gets its units from the package that the mocked package
+    # task installs, so treat every service the role refers to as available.
+    available_services.extend(
+        service for service in role_services if service not in available_services
+    )
     state = {
         "paths": {},
         "services": {"nginx": {"enabled": True, "state": "started"}},
-        "expected_services": sorted(role_service_names(role)),
-        "available_services": [
-            "nginx",
-            "dnsmasq",
-            "apache2",
-            "avahi-daemon",
-            "hostapd",
-            "hostapd.service",
-            "iiab-clone-wifi.service",
-            "mariadb",
-            "php8.2-fpm",
-            "postgresql-iiab",
-            "ssh",
-            "systemd-resolved",
-            "transmission-daemon",    # provided by the transmission-daemon package
-            "networking",
-            "wpa_supplicant",
-            "uwsgi-app@captiveportal.socket",
-            "uwsgi-app@captiveportal.service",
-        ],
+        "expected_services": role_services,
+        "available_services": available_services,
     }
     state["paths"].update(
         {
@@ -615,8 +766,8 @@ def initial_state(role: str, installed: bool = False) -> dict:
     if role == "firmware":
         state["available_services"].append("iiab-check-firmware.service")
     if installed:
-        for service in role_service_names(role):
-            if service in state["services"] or service in state["available_services"]:
+        for service in role_services:
+            if service in state["services"]:
                 continue
             unit = (
                 f"/etc/systemd/system/{service}"
@@ -643,6 +794,7 @@ def role_toggle_service_names(role: str) -> set[str]:
         if not path.is_file() or "enable-or-disable" not in path.stem:
             continue
         services.update(role_service_names_from_files((path,)))
+    services.update(ROLE_EXTRA_SERVICES.get(role, set()))
     return services
 
 
@@ -1006,8 +1158,10 @@ def playbook_header(
         "    is_debian: true",
         "    is_raspbian: false",
         "    is_ubuntu: false",
+        "    is_linuxmint: false",
         '    dpkg_arch: {"stdout": "amd64"}',
         '    php_version: "8.2"',
+        '    python_version: "3.14"',
         "    skip_role_on_error: false",
         f'    uninstall: {str(lifecycle.get("uninstall", False)).lower()}',
         f'    reinstall: {str(lifecycle.get("reinstall", False)).lower()}',
@@ -1114,6 +1268,10 @@ def create_mock_library(directory: Path) -> Path:
         action = actions / f"{name}.py"
         action.write_text(MOCK_ACTION_SOURCE, encoding="utf-8")
     (actions / "pause.py").write_text(MOCK_PAUSE_ACTION_SOURCE, encoding="utf-8")
+    (actions / "normal.py").write_text(MOCK_NORMAL_ACTION_SOURCE, encoding="utf-8")
+    (actions / "include_vars.py").write_text(
+        MOCK_INCLUDE_VARS_ACTION_SOURCE, encoding="utf-8"
+    )
     names = {
         "stat",
         "file",
@@ -1121,6 +1279,8 @@ def create_mock_library(directory: Path) -> Path:
         "copy",
         "get_curl",
         "lineinfile",
+        "blockinfile",
+        "replace",
         "ini_file",
         "group",
         "user",
@@ -1150,6 +1310,7 @@ def create_mock_library(directory: Path) -> Path:
         (library / name).symlink_to(module)
     collection_modules = {
         ("ansible", "mariadb"): {"mariadb_db", "mariadb_user"},
+        ("ansible", "posix"): {"patch"},
         ("community", "general"): {"htpasswd", "npm"},
         ("community", "postgresql"): {"postgresql_db", "postgresql_user"},
     }
@@ -1177,6 +1338,13 @@ def run_ansible(
     phase: str | None = None,
     extra_vars: dict | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    # Some roles run command tasks with become_user (postgres, www-data). The
+    # mock module writes IIAB_MOCK_STATE, so let those users traverse to and
+    # update the scenario state file.
+    state_file.parent.parent.chmod(0o777)
+    state_file.parent.chmod(0o777)
+    if state_file.exists():
+        state_file.chmod(0o666)
     environment = os.environ.copy()
     environment.update(
         {
