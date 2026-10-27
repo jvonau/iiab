@@ -22,7 +22,9 @@
 - name: Validate Zimantic settings
   import_tasks: validate.yml
 
-- block:
+- name: Running
+  when: zimantic_installed is undefined
+  block:
 
     # reinstall.yml stops the service and removes the source or data that
     # --force-reinstall resets; update.yml, install.yml, and configure.yml
@@ -55,8 +57,9 @@
              (not zimantic_source_git.stat.exists) or
              (not (zimantic_source_matches_version | bool)) }}
 
-    - name: Apply Zimantic configuration, assets, and service settings
-      include_tasks: configure.yml
+  - name: Apply Zimantic configuration, assets, and service settings
+    include_tasks: configure.yml
+
 
   rescue:
 
