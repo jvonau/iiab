@@ -1719,7 +1719,6 @@ def run_role(role: str, vars_file: str, quiet: bool = False) -> int:
         print(f"Testing {role} lifecycle with mocked filesystem, services, and processes...")
     warnings = lifecycle_warnings(role)
     if warnings:
-        print(f"  lifecycle warnings: {len(warnings)}")
         for warning in warnings:
             print(warning, end="")
     unsafe_state = unsafe_state_warnings(role)
@@ -1780,16 +1779,6 @@ def run_role(role: str, vars_file: str, quiet: bool = False) -> int:
     return failures or int(bool(unsafe_state))
 
 
-def parse_shard(value: str) -> tuple[int, int]:
-    match = re.fullmatch(r"(\d+)/(\d+)", value.strip())
-    if not match:
-        raise argparse.ArgumentTypeError("expected INDEX/TOTAL, e.g. 1/4")
-    index, total = int(match.group(1)), int(match.group(2))
-    if total < 1 or not 1 <= index <= total:
-        raise argparse.ArgumentTypeError("INDEX must be between 1 and TOTAL")
-    return index, total
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("role", nargs="?")
@@ -1800,33 +1789,17 @@ def main() -> int:
         dest="all_roles",
         help="test every active role and print lifecycle warnings and failures",
     )
-    parser.add_argument(
-        "--shard",
-        type=parse_shard,
-        metavar="INDEX/TOTAL",
-        help="with --all, test only one shard of roles (e.g. 1/4) for CI parallelism",
-    )
     parser.add_argument("--quiet", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     if shutil.which("ansible-playbook") is None:
         parser.error("ansible-playbook is required")
 
-    if args.shard and not args.all_roles:
-        parser.error("--shard requires --all")
-
     if args.all_roles:
         if args.role or args.vars_file:
             parser.error("--all does not accept a role or vars file")
         all_roles = available_roles()
         roles = all_roles
-        if args.shard:
-            index, total = args.shard
-            roles = all_roles[index - 1 :: total]
-            print(
-                f"Shard {index}/{total}: {len(roles)} of {len(all_roles)} roles",
-                file=sys.stderr,
-            )
         if not roles:
             return 0
         failures = 0
