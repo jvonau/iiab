@@ -34,8 +34,9 @@ Finally, you can [customize your Internet-in-a-Box home page](https://wiki.iiab.
 ## Running roles individually
 
 `./runrole` applies one role using `/etc/iiab/local_vars.yml`. Runs are
-repeatable: the role is installed if missing, upgraded if needed, and otherwise
-only reconfigured.
+repeatable and use local files when possible: the role is installed if missing,
+repaired offline if possible, and otherwise only reconfigured. `--upgrade` is
+the explicit network/version refresh.
 
     sudo ./runrole captiveportal                    # apply
     sudo ./runrole --add captiveportal              # apply despite captiveportal_install: False
@@ -93,6 +94,42 @@ optional `roles/<role>/meta/runrole.yml` can still opt in:
     uninstall: true
     upgrade: true
     force_reinstall: true
+
+### Role task lifecycle
+
+Roles that adopt the safe-apply pattern use a small, fixed set of task files so
+a maintainer can decide where a change belongs without guessing. `tasks/main.yml`
+only validates and dispatches; it should not contain the work itself. Zimantic
+is the reference implementation; other roles can adopt the layout incrementally.
+
+| File | When it runs | May use the network? |
+|---|---|---|
+| `validate.yml` | every apply except `--uninstall` | no |
+| `uninstall.yml` | `--uninstall` | no |
+| `reinstall.yml` | `--reinstall` and `--force-reinstall` | no |
+| `update.yml` | first install, version change, `--upgrade`, `--force-reinstall`, or a missing checkout | yes |
+| `install.yml` | every apply; skips work when already usable | only when update ran, the venv is new, or a build prerequisite is missing |
+| `configure.yml` | every apply | only to fetch a missing immutable asset |
+| `state.yml` | after a successful apply | no |
+
+The rules are intentionally simple:
+
+- `update.yml` is the only phase allowed to fetch a new program version or
+  refresh package metadata.
+- `install.yml` must be safe to run offline when the source checkout and
+  virtual environment already exist. It repairs a missing executable with
+  `--no-deps` and never deletes data or downloads.
+- `configure.yml` reconciles desired state on every run. It may fetch a missing
+  model or other checksummed asset, but never deletes or re-downloads one that
+  is already present.
+- `reinstall.yml` only stops the service and, for `--force-reinstall`, removes
+  the directories that are safe to rebuild. Heavy downloads stay in
+  `update.yml` or `configure.yml`.
+- `install.yml` writes the installed/version marker as soon as the build
+  succeeds. `state.yml` only reports the desired settings in `iiab.ini`.
+- Put computed values in `vars/main.yml`, user-facing knobs in
+  `defaults/main.yml`, and restarts in `handlers/main.yml`. Reserve `set_fact`
+  for runtime state that must survive later tasks.
 
 `--add` (`-a`) overrides `*_install: False` for that invocation only and does
 not change `local_vars.yml`. Normal runs do not prompt; `--uninstall` and

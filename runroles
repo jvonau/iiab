@@ -29,9 +29,10 @@ usage() {
     cat <<'EOF'
 Usage: ./runroles [options] <role> [role ...]
 
-Apply one or more roles using /etc/iiab/local_vars.yml. Runs are repeatable:
-roles are installed if missing, upgraded if needed, and otherwise only
-reconfigured.
+Apply one or more roles using /etc/iiab/local_vars.yml. Runs are repeatable and
+use local files when possible: roles are installed if missing, repaired offline
+if possible, and otherwise only reconfigured. Use --upgrade for the explicit
+network/version refresh.
 
 Options:
   -y, --yes             Do not ask for confirmation
