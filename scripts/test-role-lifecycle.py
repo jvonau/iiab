@@ -520,28 +520,29 @@ def prepare_controller_files(scenario: Path) -> None:
 def role_tasks(role: str, scenario: Path, installed: bool) -> str:
     if role != "zimantic":
         return ""
-    return textwrap.dedent(
-        f"""\
-            - set_fact:
-                kiwix_enabled: false
-                zimantic_use_system_packages: never
-                zimantic_source_dir: "{scenario}/source"
-                zimantic_venv: "{scenario}/source/.venv"
-                zimantic_data_dir: "{scenario}/data"
-                zimantic_config_file: "{scenario}/data/config.toml"
-                zimantic_index_dir: "{scenario}/data/indexes"
-                zimantic_model_dir: "{scenario}/data/model"
-                zimantic_zim_dir: "{scenario}/zims/content"
-                nginx_conf_dir: "{scenario}/nginx"
-                iiab_base: "{scenario}/iiab"
-                content_base: "{scenario}/library"
-                iiab_zim_path: "{scenario}/zims"
-                iiab_ini_file: "{scenario}/iiab.ini"
-                iiab_state_file: "{scenario}/iiab_state.yml"
-                zimantic_installed: {str(installed).lower()}
-                zimantic_installed_version: v0.1.5
-        """
-    ).rstrip()
+    settings = [
+        "kiwix_enabled: false",
+        "zimantic_use_system_packages: never",
+        f'zimantic_source_dir: "{scenario}/source"',
+        f'zimantic_venv: "{scenario}/source/.venv"',
+        f'zimantic_data_dir: "{scenario}/data"',
+        f'zimantic_config_file: "{scenario}/data/config.toml"',
+        f'zimantic_index_dir: "{scenario}/data/indexes"',
+        f'zimantic_model_dir: "{scenario}/data/model"',
+        f'zimantic_zim_dir: "{scenario}/zims/content"',
+        f'nginx_conf_dir: "{scenario}/nginx"',
+        f'iiab_base: "{scenario}/iiab"',
+        f'content_base: "{scenario}/library"',
+        f'iiab_zim_path: "{scenario}/zims"',
+        f'iiab_ini_file: "{scenario}/iiab.ini"',
+        f'iiab_state_file: "{scenario}/iiab_state.yml"',
+    ]
+    # A real iiab_state.yml has zimantic_installed only after install.yml has
+    # written it, so leave the marker undefined on a fresh host.
+    if installed:
+        settings.append("zimantic_installed: true")
+    settings.append("zimantic_installed_version: v0.1.5")
+    return "\n".join(["- set_fact:", *(f"    {setting}" for setting in settings)])
 
 
 def playbook_header(
@@ -830,8 +831,8 @@ def operation_result(
         enabled_name: values["enabled"],
         **{key: values[key] for key in ("uninstall", "reinstall", "force_reinstall", "upgrade")},
     }
-    if role == "zimantic":
-        extra_vars["zimantic_installed"] = values["installed"]
+    if role == "zimantic" and values["installed"]:
+        extra_vars["zimantic_installed"] = True
     result = run_ansible(
         playbook,
         library,
@@ -840,7 +841,7 @@ def operation_result(
         phase=name,
         extra_vars=extra_vars,
     )
-    output = [f"  {name:<16}"]
+    output = [f"  {name:<19}"]
     if result.returncode:
         output.append("FAIL\n")
         output.append("".join(result.stdout.splitlines(True)[-40:]))
@@ -853,7 +854,18 @@ def operation_result(
         if name == "uninstall":
             ok = unit not in state["paths"] and service and service["state"] == "stopped"
         elif name == "disabled-apply":
-            ok = unit not in state["paths"] and service is None
+            # Fresh apply with _enabled: False (the './runrole --add' case):
+            # install the unit, but do not start the service.
+            ok = unit in state["paths"] and (
+                service is None or service["state"] not in ACTIVE_STATES
+            )
+        elif name == "installed-disabled":
+            # Already installed but disabled: the service must be stopped.
+            ok = (
+                unit in state["paths"]
+                and service is not None
+                and service["state"] not in ACTIVE_STATES
+            )
         else:
             ok = unit in state["paths"] and service and service["state"] in ACTIVE_STATES
         if not ok:
@@ -877,7 +889,7 @@ def toggle_result(
 ) -> str:
     scenario = temp_dir / "toggle"
     if not toggle_supported:
-        return "  toggle          SKIP (role has no service toggle tasks)\n"
+        return f"  {'toggle':<19}SKIP (role has no service toggle tasks)\n"
     scenario.mkdir()
     prepare_controller_files(scenario)
     (scenario / "iiab_state.yml").touch()
@@ -910,7 +922,7 @@ def toggle_result(
         )
     playbook.write_text("---\n" + "".join(plays), encoding="utf-8")
     result = run_ansible(playbook, library, state_file)
-    output = [f"  {'toggle':<16}"]
+    output = [f"  {'toggle':<19}"]
     if result.returncode:
         output.append("FAIL\n")
         output.append("".join(result.stdout.splitlines(True)[-40:]))
@@ -1013,6 +1025,12 @@ def run_role(role: str, vars_file: str, quiet: bool = False) -> int:
     uninstall_supported = role_supports(role, "uninstall")
     toggle_supported = role_manages_service_toggle(role)
     toggle_services = role_toggle_service_names(role)
+    # An already-installed role that is disabled should stop its service
+    # without needing to be reinstalled first.
+    if toggle_supported:
+        operations.append(("installed-disabled", {"installed": True, "enabled": False}))
+    else:
+        skipped.append("installed-disabled")
     if role_supports(role, "force_reinstall"):
         operations.extend(
             [
@@ -1037,7 +1055,7 @@ def run_role(role: str, vars_file: str, quiet: bool = False) -> int:
     if not quiet:
         print(f"Testing {role} lifecycle with mocked filesystem, services, and processes...")
         for name in skipped:
-            print(f"  {name:<16} SKIP (unsupported)")
+            print(f"  {name:<19} SKIP (unsupported)")
 
     with tempfile.TemporaryDirectory(prefix="iiab-role-lifecycle.") as directory:
         temp_dir = Path(directory)
