@@ -41,7 +41,7 @@ only reconfigured.
     sudo ./runrole --add captiveportal              # apply despite captiveportal_install: False
     sudo ./runrole --reinstall captiveportal        # reinstall the program
     sudo ./runrole --upgrade zimantic               # upgrade, where supported
-    sudo ./runrole --force-reinstall zimantic       # also reset dependencies, caches, and settings
+    sudo ./runrole --clean-install zimantic       # also reset dependencies, caches, and settings
     sudo ./runrole --uninstall zimantic             # uninstall, where supported
     ./runrole --status captiveportal                # show installed/desired state
     sudo ./runrole --check captiveportal            # best-effort dry run
@@ -50,11 +50,11 @@ The repair options escalate, from least to most work:
 
 - `--reinstall` rebuilds the program only. Every role accepts it.
 - `--upgrade` upgrades it where supported.
-- `--force-reinstall` also resets dependencies, caches, and settings where
+- `--clean-install` also resets dependencies, caches, and settings where
   supported.
 - `--uninstall` removes the program where supported.
 
-`--reinstall`, `--upgrade`, and `--force-reinstall` act on a role that the
+`--reinstall`, `--upgrade`, and `--clean-install` act on a role that the
 configuration says should be installed, so they also need `*_install: True`;
 pass `--add` to act on a role whose `*_install` is `False`. `--uninstall` is
 the exception, since it removes the installation and then asks you to set
@@ -63,14 +63,14 @@ the exception, since it removes the installation and then asks you to set
 `./runroles` accepts the same options and multiple roles, e.g.
 `./runroles --status captiveportal kiwix`.
 
-`--reinstall` and `--force-reinstall` remove the role's entries from
+`--reinstall` and `--clean-install` remove the role's entries from
 `/etc/iiab/iiab_state.yml` before running. Most roles skip `install.yml` while
 their `*_installed` variable is defined, so this forces a reinstall. `runrole`
 exits if the role has no entry; `runroles` installs such roles normally.
 `--uninstall` removes the same entries and asks the role to clean up after
 itself.
 
-A role supports `--uninstall`, `--upgrade`, or `--force-reinstall` when its
+A role supports `--uninstall`, `--upgrade`, or `--clean-install` when its
 `tasks/main.yml` or `tasks/main.yaml` implements that operation. `runrole` and
 `runroles` detect this from the role entrypoint, so an unused
 `tasks/uninstall.yml` file alone does not opt a role in and no separate
@@ -96,7 +96,7 @@ optional `roles/<role>/meta/runrole.yml` can still opt in:
 
 `--add` (`-a`) overrides `*_install: False` for that invocation only and does
 not change `local_vars.yml`. Normal runs do not prompt; `--uninstall` and
-`--force-reinstall` ask for `yes` unless `-y` is given (and only when there is
+`--clean-install` ask for `yes` unless `-y` is given (and only when there is
 an existing installation to remove or reset). `--check` runs Ansible in check
 mode (`--check --diff`), which not every role supports. `--status` is read-only
 and cannot be combined with the other options.

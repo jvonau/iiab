@@ -39,7 +39,7 @@ Options:
       --apply           Apply settings (the default)
       --reinstall       Reinstall the programs (supported by every role)
       --upgrade         Upgrade (roles that implement 'upgrade')
-      --force-reinstall Reinstall and reset dependencies, caches, and settings (roles that implement 'force_reinstall')
+      --clean-install Reinstall and reset dependencies, caches, and settings (roles that implement 'force_reinstall')
       --uninstall       Uninstall the programs (roles that implement 'uninstall')
       --check           Best-effort Ansible check mode (--check --diff)
       --status          Show installed/desired state without changing anything
@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
             REINSTALL=true
             EXTRA_VARS="$EXTRA_VARS\"reinstall\":True,"
             ;;
-        --force-reinstall)
+        --clean-install)
             REINSTALL=true
             FORCE_REINSTALL=true
             EXTRA_VARS="$EXTRA_VARS\"reinstall\":True,\"force_reinstall\":True,"
@@ -109,12 +109,12 @@ if [[ ${#ROLES[@]} -eq 0 ]]; then
 fi
 
 if $UNINSTALL && ($REINSTALL || $UPGRADE || $ADD); then
-    echo "--uninstall cannot be combined with --add, --reinstall, --upgrade, or --force-reinstall."
+    echo "--uninstall cannot be combined with --add, --reinstall, --upgrade, or --clean-install."
     exit 1
 fi
 
 if $REINSTALL && $UPGRADE; then
-    echo "--reinstall and --force-reinstall cannot be combined with --upgrade."
+    echo "--reinstall and --clean-install cannot be combined with --upgrade."
     exit 1
 fi
 
@@ -125,7 +125,7 @@ if $CHECK && $UNINSTALL; then
 fi
 
 if $CHECK && $REINSTALL; then
-    echo "--check cannot be combined with --reinstall or --force-reinstall."
+    echo "--check cannot be combined with --reinstall or --clean-install."
     echo "Use --status to inspect the roles without changing anything."
     exit 1
 fi
@@ -150,7 +150,7 @@ for role in "${ROLES[@]}"; do
     if $UPGRADE && ! role_require_capability "$role" "--upgrade" upgrade; then
         unsupported=true
     fi
-    if $FORCE_REINSTALL && ! role_require_capability "$role" "--force-reinstall" force_reinstall; then
+    if $FORCE_REINSTALL && ! role_require_capability "$role" "--clean-install" force_reinstall; then
         unsupported=true
     fi
 done
@@ -250,11 +250,11 @@ elif $REINSTALL; then
 
     # Only ask when this run will actually reset an existing installation.
     if $FORCE_REINSTALL && $installed; then
-        echo -e "\e[1;31mWARNING: --force-reinstall may delete the listed roles' data, caches, indexes, and settings where the roles support it.\e[0m"
+        echo -e "\e[1;31mWARNING: --clean-install may delete the listed roles' data, caches, indexes, and settings where the roles support it.\e[0m"
         confirm_destructive || { echo "Cancelled."; exit 1; }
     fi
     if ! $FORCE_REINSTALL; then
-        echo "Use --force-reinstall to also reset dependencies, caches, indexes, and settings where the roles support it."
+        echo "Use --clean-install to also reset dependencies, caches, indexes, and settings where the roles support it."
     fi
 
     if $installed; then

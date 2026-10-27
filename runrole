@@ -35,7 +35,7 @@ Options:
       --apply           Apply settings (the default)
       --reinstall       Reinstall the program (supported by every role)
       --upgrade         Upgrade (roles that implement 'upgrade')
-      --force-reinstall Reinstall and reset dependencies, caches, and settings (roles that implement 'force_reinstall')
+      --clean-install Reinstall and reset dependencies, caches, and settings (roles that implement 'force_reinstall')
       --uninstall       Uninstall the program (roles that implement 'uninstall')
       --check           Best-effort Ansible check mode (--check --diff)
       --status          Show installed/desired state without changing anything
@@ -45,10 +45,10 @@ Examples:
   ./runrole captiveportal
   ./runrole --reinstall captiveportal
   ./runrole --upgrade zimantic
-  ./runrole --force-reinstall zimantic
+  ./runrole --clean-install zimantic
   ./runrole --uninstall zimantic
 
---reinstall, --upgrade and --force-reinstall act on a role that the
+--reinstall, --upgrade and --clean-install act on a role that the
 configuration says should be installed, so they also require
 '<role>_install: True' (pass -a to override it for one run). --status is
 read-only and cannot be combined with the other options.
@@ -72,7 +72,7 @@ while [[ $# -gt 0 ]]; do
             REINSTALL=true
             ARGS="$ARGS\"reinstall\":True,"    # Needs boolean not string so use JSON list
             ;;
-        --force-reinstall)
+        --clean-install)
             REINSTALL=true
             FORCE_REINSTALL=true
             ARGS="$ARGS\"reinstall\":True,\"force_reinstall\":True,"
@@ -127,12 +127,12 @@ if [ ! -v ROLE_NAME ]; then    # Test whether var is STILL not set!
 fi
 
 if $UNINSTALL && ($REINSTALL || $UPGRADE || $ADD); then
-    echo "--uninstall cannot be combined with --add, --reinstall, --upgrade, or --force-reinstall."
+    echo "--uninstall cannot be combined with --add, --reinstall, --upgrade, or --clean-install."
     exit 1
 fi
 
 if $REINSTALL && $UPGRADE; then
-    echo "--reinstall and --force-reinstall cannot be combined with --upgrade."
+    echo "--reinstall and --clean-install cannot be combined with --upgrade."
     exit 1
 fi
 
@@ -143,7 +143,7 @@ if $CHECK && $UNINSTALL; then
 fi
 
 if $CHECK && $REINSTALL; then
-    echo "--check cannot be combined with --reinstall or --force-reinstall."
+    echo "--check cannot be combined with --reinstall or --clean-install."
     echo "Use --status to inspect the role without changing anything."
     exit 1
 fi
@@ -171,7 +171,7 @@ if $UPGRADE; then
     role_require_capability "$ROLE_NAME" "--upgrade" upgrade || exit 1
 fi
 if $FORCE_REINSTALL; then
-    role_require_capability "$ROLE_NAME" "--force-reinstall" force_reinstall || exit 1
+    role_require_capability "$ROLE_NAME" "--clean-install" force_reinstall || exit 1
 fi
 
 # 4 snippets to guide -> bootstrap -> accelerate role debugging on bare OS's:
@@ -274,13 +274,13 @@ if $UNINSTALL; then   # Add '_' so '--uninstall calibre' doesn't zap calibreweb
 elif $REINSTALL; then   # Add '_' so '--reinstall calibre' doesn't zap calibreweb
     if grep -q "^${ROLE_VAR}_" "$IIAB_STATE_FILE"; then
         if $FORCE_REINSTALL; then
-            echo -e "\e[1;31mWARNING: --force-reinstall may delete ${ROLE_NAME}'s data, caches, indexes, and settings where the role supports it.\e[0m"
+            echo -e "\e[1;31mWARNING: --clean-install may delete ${ROLE_NAME}'s data, caches, indexes, and settings where the role supports it.\e[0m"
             confirm_destructive || { echo "Cancelled."; exit 1; }
         fi
 
         echo -e "\e[1mReinstalling ${ROLE_NAME}.\e[0m\n"
         if ! $FORCE_REINSTALL; then
-            echo "Use --force-reinstall to also reset dependencies, caches, indexes, and settings where the role supports it."
+            echo "Use --clean-install to also reset dependencies, caches, indexes, and settings where the role supports it."
         fi
         echo -e "\nDeleting these line(s) from $IIAB_STATE_FILE:\n"
         grep "^${ROLE_VAR}_" "$IIAB_STATE_FILE"; echo

@@ -25,9 +25,9 @@ iiab_revision: 0
 skip_role_on_error: True
 
 # Passed by ./runrole and ./runroles. Only roles whose tasks implement the
-# matching operation accept --uninstall, --upgrade, and --force-reinstall.
+# matching operation accept --uninstall, --upgrade, and --clean-install.
 # ./runrole detects this from the role's tasks (no metadata file required).
-# --force-reinstall always sets reinstall too.
+# --clean-install always sets reinstall too.
 uninstall: False
 reinstall: False
 force_reinstall: False
