@@ -2,46 +2,44 @@
 # Entry point. This file only validates and dispatches to the lifecycle task
 # files; see "Role task lifecycle" in the top-level README.md.
 #
-#   update.yml         the only phase that installs packages or builds from source
-#   install.yml        offline-safe install/repair
-#   configure.yml      always runs; Transmission settings
-#   enable-or-disable.yml  service state and optional torrent provisioning
-#   uninstall.yml      cleanup for --uninstall
-#   state.yml          records the reported settings in iiab.ini
+#   update.yml            the only phase that installs packages or builds from source
+#   install.yml           offline-safe install/repair
+#   configure.yml         always runs; Transmission settings
+#   enable-or-disable.yml service state and optional torrent provisioning
+#   uninstall.yml         cleanup for --uninstall
+#   state.yml             records the reported settings in iiab.ini
 
-# './runrole --uninstall transmission' removes the role instead of applying it,
-# so skip install-time validation and end the role once cleanup is done.
 - name: Uninstall Transmission
   include_tasks: uninstall.yml
   when: uninstall
 
-- name: Stop processing Transmission after uninstall
-  meta: end_role
-  when: uninstall
+- name: Apply Transmission
+  when: not uninstall
+  block:
 
-- name: Validate Transmission settings
-  import_tasks: validate.yml
+    - name: Validate Transmission settings
+      include_tasks: validate.yml
 
-- block:
+    - block:
 
-    - name: Install Transmission packages and optional source build
-      include_tasks: update.yml
-      when: transmission_installed is undefined
+        - name: Install Transmission packages and optional source build
+          include_tasks: update.yml
+          when: transmission_installed is undefined
 
-    - name: Install or repair Transmission
-      include_tasks: install.yml
+        - name: Install or repair Transmission
+          include_tasks: install.yml
 
-    - name: Apply Transmission settings
-      include_tasks: configure.yml
+        - name: Apply Transmission settings
+          include_tasks: configure.yml
 
-    - include_tasks: enable-or-disable.yml
+        - include_tasks: enable-or-disable.yml
 
-    - name: Record Transmission state
-      include_tasks: state.yml
+        - name: Record Transmission state
+          include_tasks: state.yml
 
-  rescue:
+      rescue:
 
-    - name: 'SEE ERROR ABOVE (skip_role_on_error: {{ skip_role_on_error }})'
-      fail:
-        msg: ""
-      when: not skip_role_on_error
+        - name: 'SEE ERROR ABOVE (skip_role_on_error: {{ skip_role_on_error }})'
+          fail:
+            msg: ""
+          when: not skip_role_on_error

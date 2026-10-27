@@ -8,37 +8,35 @@
 #   uninstall.yml  cleanup for --uninstall
 #   state.yml      records the reported settings in iiab.ini
 
-# './runrole --uninstall awstats' removes the role instead of applying it, so
-# skip install-time validation and end the role once cleanup is done.
 - name: Uninstall AWStats
   include_tasks: uninstall.yml
   when: uninstall
 
-- name: Stop processing AWStats after uninstall
-  meta: end_role
-  when: uninstall
+- name: Apply AWStats
+  when: not uninstall
+  block:
 
-- name: Validate AWStats settings
-  import_tasks: validate.yml
+    - name: Validate AWStats settings
+      include_tasks: validate.yml
 
-- block:
+    - block:
 
-    - name: Install the AWStats package
-      include_tasks: update.yml
-      when: awstats_installed is undefined
+        - name: Install the AWStats package
+          include_tasks: update.yml
+          when: awstats_installed is undefined
 
-    - name: Install or repair AWStats
-      include_tasks: install.yml
+        - name: Install or repair AWStats
+          include_tasks: install.yml
 
-    - name: Apply AWStats configuration
-      include_tasks: configure.yml
+        - name: Apply AWStats configuration
+          include_tasks: configure.yml
 
-    - name: Record AWStats state
-      include_tasks: state.yml
+        - name: Record AWStats state
+          include_tasks: state.yml
 
-  rescue:
+      rescue:
 
-    - name: 'SEE ERROR ABOVE (skip_role_on_error: {{ skip_role_on_error }})'
-      fail:
-        msg: ""
-      when: not skip_role_on_error
+        - name: 'SEE ERROR ABOVE (skip_role_on_error: {{ skip_role_on_error }})'
+          fail:
+            msg: ""
+          when: not skip_role_on_error

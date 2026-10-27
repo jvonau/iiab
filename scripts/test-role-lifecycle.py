@@ -1187,8 +1187,14 @@ def run_ansible(
         "localhost,",
         str(playbook),
     ]
+    # default_vars.yml sets skip_role_on_error: True, and vars_files beat the
+    # play-level value in make_playbook(). Force it as an extra var so a real
+    # role failure makes the lifecycle test fail instead of silently passing.
+    scenario_vars = {"skip_role_on_error": False}
     if extra_vars:
-        command.extend(["--extra-vars", json.dumps(extra_vars)])
+        scenario_vars.update(extra_vars)
+    command.extend(["--extra-vars", json.dumps(scenario_vars)])
+
     return subprocess.run(
         command,
         cwd=ROOT_DIR,
