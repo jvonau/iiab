@@ -40,10 +40,10 @@ only reconfigured.
     sudo ./runrole captiveportal                    # apply
     sudo ./runrole --add captiveportal              # apply despite captiveportal_install: False
     sudo ./runrole --reinstall captiveportal        # reinstall the program
-    sudo ./runrole --upgrade captiveportal          # upgrade, where supported
-    sudo ./runrole --force-reinstall captiveportal  # also reset dependencies, caches, and settings
-    sudo ./runrole --uninstall captiveportal        # uninstall, where supported
-    sudo ./runrole --status captiveportal           # show installed/desired state
+    sudo ./runrole --upgrade zimantic               # upgrade, where supported
+    sudo ./runrole --force-reinstall zimantic       # also reset dependencies, caches, and settings
+    sudo ./runrole --uninstall zimantic             # uninstall, where supported
+    ./runrole --status captiveportal                # show installed/desired state
     sudo ./runrole --check captiveportal            # best-effort dry run
 
 The repair options escalate, from least to most work:
@@ -54,8 +54,14 @@ The repair options escalate, from least to most work:
   supported.
 - `--uninstall` removes the program where supported.
 
+`--reinstall`, `--upgrade`, and `--force-reinstall` act on a role that the
+configuration says should be installed, so they also need `*_install: True`;
+pass `--add` to act on a role whose `*_install` is `False`. `--uninstall` is
+the exception, since it removes the installation and then asks you to set
+`*_install: False`.
+
 `./runroles` accepts the same options and multiple roles, e.g.
-`sudo ./runroles --status captiveportal kiwix`.
+`./runroles --status captiveportal kiwix`.
 
 `--reinstall` and `--force-reinstall` remove the role's entries from
 `/etc/iiab/iiab_state.yml` before running. Most roles skip `install.yml` while
@@ -90,8 +96,10 @@ optional `roles/<role>/meta/runrole.yml` can still opt in:
 
 `--add` (`-a`) overrides `*_install: False` for that invocation only and does
 not change `local_vars.yml`. Normal runs do not prompt; `--uninstall` and
-`--force-reinstall` ask for `yes` unless `-y` is given. `--check` runs Ansible in
-check mode (`--check --diff`), which not every role supports.
+`--force-reinstall` ask for `yes` unless `-y` is given (and only when there is
+an existing installation to remove or reset). `--check` runs Ansible in check
+mode (`--check --diff`), which not every role supports. `--status` is read-only
+and cannot be combined with the other options.
 
 ## Community
 

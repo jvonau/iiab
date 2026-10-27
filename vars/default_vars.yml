@@ -4,8 +4,10 @@
 
 # Internet-in-a-Box (IIAB) uses True/False to indicate boolean values.
 
-# IIAB does NOT currently support uninstalling apps!  So: if any IIAB app is
-# installed with 'APP_XYZ_install: True' below, do NOT later change that.
+# IIAB normally installs apps but does not uninstall them. Roles that implement
+# the extended operations can be removed with './runrole --uninstall <role>'.
+# So: if any IIAB app is installed with 'APP_XYZ_install: True' below, do NOT
+# later change that unless you are uninstalling it.
 
 # WARNING: IF YOU CONNECT YOUR IIAB'S INTERNAL WIFI TO THE INTERNET OVER 5 GHz,
 # YOU'LL PREVENT OLDER LAPTOPS/PHONES/TABLETS (WHICH REQUIRE 2.4 GHz) FROM

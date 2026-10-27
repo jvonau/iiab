@@ -44,9 +44,14 @@ Options:
 Examples:
   ./runrole captiveportal
   ./runrole --reinstall captiveportal
-  ./runrole --upgrade captiveportal
-  ./runrole --force-reinstall captiveportal
-  ./runrole --uninstall captiveportal
+  ./runrole --upgrade zimantic
+  ./runrole --force-reinstall zimantic
+  ./runrole --uninstall zimantic
+
+--reinstall, --upgrade and --force-reinstall act on a role that the
+configuration says should be installed, so they also require
+'<role>_install: True' (pass -a to override it for one run). --status is
+read-only and cannot be combined with the other options.
 EOF
 }
 
@@ -143,6 +148,11 @@ if $CHECK && $REINSTALL; then
     exit 1
 fi
 
+if $STATUS && ($UNINSTALL || $REINSTALL || $UPGRADE || $ADD || $CHECK); then
+    echo "--status is read-only and cannot be combined with --add, --check, --reinstall, --upgrade, or --uninstall."
+    exit 1
+fi
+
 if [ ! -v ANSIBLE_LOG_PATH ]; then
     export ANSIBLE_LOG_PATH="$CWD/iiab-debug.log"    # Default log file location
 fi
@@ -167,10 +177,10 @@ fi
 # 4 snippets to guide -> bootstrap -> accelerate role debugging on bare OS's:
 
 if ! $CHECK; then
-    mkdir -p /etc/iiab    # -p avoids errors, effectively like '|| true'
+    mkdir -p "$(dirname "$LOCAL_VARS_FILE")"    # -p avoids errors, effectively like '|| true'
 fi
-if [ ! -f /etc/iiab/local_vars.yml ]; then
-    echo -e "\n\e[1mEXITING: /opt/iiab/iiab/runrole REQUIRES /etc/iiab/local_vars.yml\e[0m\n" >&2
+if [ ! -f "$LOCAL_VARS_FILE" ]; then
+    echo -e "\n\e[1mEXITING: /opt/iiab/iiab/runrole REQUIRES $LOCAL_VARS_FILE\e[0m\n" >&2
 
     echo -e "(1) See http://FAQ.IIAB.IO -> What is local_vars.yml and how do I customize it?" >&2
     echo -e "(2) SMALL/MEDIUM/LARGE samples are included in /opt/iiab/iiab/vars" >&2
@@ -198,18 +208,20 @@ if $CHECK; then
     else
         cat > "$CHECK_STATE_FILE" << EOF
 # DO *NOT* MANUALLY EDIT THIS, THANKS!
-# IIAB does NOT currently support uninstalling apps/services.
+# IIAB installs apps/services; './runrole --uninstall' is only for roles that
+# provide the matching extended operation.
 
 EOF
     fi
     ARGS="$ARGS\"iiab_state_file\":\"$CHECK_STATE_FILE\","
-elif [ ! -f "$IIAB_STATE_FILE" ]; then
+elif ! $UNINSTALL && [ ! -f "$IIAB_STATE_FILE" ]; then
     # In comparison, ./iiab-network and ./iiab-configure warn operators (IN RED)
     # if run without the existence of /etc/iiab/iiab_state.yml
     echo -e "\n\e[1mCreating... $IIAB_STATE_FILE\e[0m"
     cat > "$IIAB_STATE_FILE" << EOF
 # DO *NOT* MANUALLY EDIT THIS, THANKS!
-# IIAB does NOT currently support uninstalling apps/services.
+# IIAB installs apps/services; './runrole --uninstall' is only for roles that
+# provide the matching extended operation.
 
 EOF
 fi
@@ -226,15 +238,27 @@ fi
 
 role_install_enabled "$ROLE_NAME" && INSTALL=true
 
+# Check this before touching iiab_state.yml: a refused reinstall/upgrade must
+# not delete the entries that record an existing installation.
+if ! $UNINSTALL && ! $INSTALL; then
+    if ! $ADD; then
+        echo -e "\e[1m'${ROLE_VAR}_install: True' MUST BE SET!\e[0m\n"
+        echo -e "Set it in: $LOCAL_VARS_FILE\n"
+        echo "Or pass --add to run it once despite '${ROLE_VAR}_install: False'."
+        exit 1
+    fi
+    echo "WARNING: --add sets '${ROLE_VAR}_install: True' for this run only."
+fi
+
 echo
 if $UNINSTALL; then   # Add '_' so '--uninstall calibre' doesn't zap calibreweb
-    if grep -q "^${ROLE_VAR}_" $IIAB_STATE_FILE; then
+    if [ -f "$IIAB_STATE_FILE" ] && grep -q "^${ROLE_VAR}_" "$IIAB_STATE_FILE"; then
         echo -e "\e[1;31mWARNING: --uninstall removes ${ROLE_NAME} and may delete its data and settings.\e[0m"
         confirm_destructive || { echo "Cancelled."; exit 1; }
 
         echo -e "\e[1mUninstalling ${ROLE_NAME}.\e[0m\n"
         echo -e "Deleting these line(s) from $IIAB_STATE_FILE:\n"
-        grep "^${ROLE_VAR}_" $IIAB_STATE_FILE; echo
+        grep "^${ROLE_VAR}_" "$IIAB_STATE_FILE"; echo
         backup_state_file || exit 1
         if ! sed -i "/^${ROLE_VAR}_/d" "$IIAB_STATE_FILE"; then
             echo "ERROR: could not update $IIAB_STATE_FILE." >&2
@@ -248,7 +272,7 @@ if $UNINSTALL; then   # Add '_' so '--uninstall calibre' doesn't zap calibreweb
         exit 1
     fi
 elif $REINSTALL; then   # Add '_' so '--reinstall calibre' doesn't zap calibreweb
-    if grep -q "^${ROLE_VAR}_" $IIAB_STATE_FILE; then
+    if grep -q "^${ROLE_VAR}_" "$IIAB_STATE_FILE"; then
         if $FORCE_REINSTALL; then
             echo -e "\e[1;31mWARNING: --force-reinstall may delete ${ROLE_NAME}'s data, caches, indexes, and settings where the role supports it.\e[0m"
             confirm_destructive || { echo "Cancelled."; exit 1; }
@@ -259,8 +283,13 @@ elif $REINSTALL; then   # Add '_' so '--reinstall calibre' doesn't zap calibrewe
             echo "Use --force-reinstall to also reset dependencies, caches, indexes, and settings where the role supports it."
         fi
         echo -e "\nDeleting these line(s) from $IIAB_STATE_FILE:\n"
-        grep "^${ROLE_VAR}_" $IIAB_STATE_FILE; echo
-        sed -i "/^${ROLE_VAR}_/d" $IIAB_STATE_FILE
+        grep "^${ROLE_VAR}_" "$IIAB_STATE_FILE"; echo
+        backup_state_file || exit 1
+        if ! sed -i "/^${ROLE_VAR}_/d" "$IIAB_STATE_FILE"; then
+            echo "ERROR: could not update $IIAB_STATE_FILE." >&2
+            restore_state_file
+            exit 1
+        fi
     else
         echo -e "\e[1mERROR: $IIAB_STATE_FILE has no line(s) that begin with '${ROLE_VAR}_'\e[0m\n"
         echo "Nothing to reinstall. Run without --reinstall to install it normally."
@@ -270,7 +299,7 @@ else
     if $UPGRADE; then
         echo -e "\e[1mUpgrading ${ROLE_NAME}.\e[0m\n"
     fi
-    if grep -q "^${ROLE_VAR}_" $IIAB_STATE_FILE; then
+    if [ -f "$IIAB_STATE_FILE" ] && grep -q "^${ROLE_VAR}_" "$IIAB_STATE_FILE"; then
         if ! $ASSUME_YES && ! $UPGRADE && ! $CHECK; then
             echo -e "\e[1m${ROLE_NAME} is already installed.\e[0m"
             echo "Applying settings from $LOCAL_VARS_FILE (safe to repeat)."
@@ -279,14 +308,7 @@ else
     fi
 fi
 
-if ! $UNINSTALL && ! $INSTALL; then
-    if ! $ADD; then
-        echo -e "\e[1m'${ROLE_VAR}_install: True' MUST BE SET!\e[0m\n"
-        echo -e "Set it in: $LOCAL_VARS_FILE\n"
-        echo "Or pass --add to run it once despite '${ROLE_VAR}_install: False'."
-        exit 1
-    fi
-    echo "WARNING: --add sets '${ROLE_VAR}_install: True' for this run only."
+if $ADD && ! $UNINSTALL; then
     ARGS="$ARGS\"${ROLE_VAR}_install\":True,"
 fi
 
