@@ -154,7 +154,7 @@
   when:
     - zimantic_mode == 'semantic'
     - not zimantic_model_file.stat.exists or
-     not zimantic_tokenizer_file.stat.exists
+      not zimantic_tokenizer_file.stat.exists
 
 - name: Install Zimantic configuration
   template:
