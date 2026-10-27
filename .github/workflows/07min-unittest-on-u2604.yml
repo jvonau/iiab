@@ -120,13 +120,9 @@ jobs:
           for role in "${roles[@]}"; do
             var=$(source scripts/runrole-common.sh; role_var "$role")
             if grep -q "^${var}_install:" /etc/iiab/local_vars.yml; then
-              sudo sed -i "s/^${var}_install:.*/${var}_install: True/" \
-                /etc/iiab/local_vars.yml
               sudo sed -i "s/^${var}_enabled:.*/${var}_enabled: True/" \
                 /etc/iiab/local_vars.yml
             else
-              printf '%s_install: True\n' "$var" |
-                sudo tee -a /etc/iiab/local_vars.yml >/dev/null
               printf '%s_enabled: True\n' "$var" |
                 sudo tee -a /etc/iiab/local_vars.yml >/dev/null
             fi
