@@ -107,8 +107,8 @@ is the reference implementation; other roles can adopt the layout incrementally.
 | `validate.yml` | every apply except `--uninstall` | no |
 | `uninstall.yml` | `--uninstall` | no |
 | `reinstall.yml` | `--reinstall` and `--force-reinstall` | no |
-| `update.yml` | first install, version change, `--upgrade`, `--force-reinstall`, or a missing checkout | yes |
-| `install.yml` | every apply; skips work when already usable | only when update ran, the venv is new, or a build prerequisite is missing |
+| `update.yml` | first install, version change, `--upgrade`, `--force-reinstall`, a missing checkout, or a checkout that does not match `zimantic_version` | yes |
+| `install.yml` | every apply; skips work when already usable | only when update ran, the venv is new and wheels are in use, or a build prerequisite is missing |
 | `configure.yml` | every apply | only to fetch a missing immutable asset |
 | `state.yml` | after a successful apply | no |
 
@@ -118,7 +118,9 @@ The rules are intentionally simple:
   refresh package metadata.
 - `install.yml` must be safe to run offline when the source checkout and
   virtual environment already exist. It repairs a missing executable with
-  `--no-deps` and never deletes data or downloads.
+  `--no-deps` and never deletes data or downloads. When distribution packages
+  provide the native dependencies, it always uses `--no-deps` so pip cannot
+  replace them.
 - `configure.yml` reconciles desired state on every run. It may fetch a missing
   model or other checksummed asset, but never deletes or re-downloads one that
   is already present.
