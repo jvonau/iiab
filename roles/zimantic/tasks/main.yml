@@ -57,7 +57,7 @@
       - zimantic_ocr_languages is string
       - zimantic_ocr_languages | length > 0
       - zimantic_asr | type_debug == 'bool'
-      - zimantic_asr_model | is string
+      - zimantic_asr_model is string
       - zimantic_asr_model | length > 0
     fail_msg: "Check the zimantic_file_* extraction limits and the OCR/ASR settings in local_vars.yml"
     quiet: yes
