@@ -1077,6 +1077,74 @@ def lifecycle_warnings(role: str) -> list[str]:
     return warnings
 
 
+STATE_MARKER = re.compile(
+    r"(?<![A-Za-z0-9_.'\"])([A-Za-z0-9_]+_(?:installed|downloaded))"
+    r"(?![A-Za-z0-9_.\[])"
+)
+SAFE_STATE_MARKER = re.compile(
+    r"^\s*(?:is\s+(?:not\s+)?(?:defined|undefined)|\|\s*default|default\s*\()"
+)
+
+
+def condition_texts(value) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        texts: list[str] = []
+        for item in value:
+            texts.extend(condition_texts(item))
+        return texts
+    return []
+
+
+def unsafe_state_warnings(role: str) -> list[str]:
+    """Warn when an optional state marker is tested without a guard.
+
+    ``*_installed`` and ``*_downloaded`` are only defined after a role writes
+    them to iiab_state.yml.  A bare reference raises for a host that never ran
+    that role, so use ``lookup('installed', 'mysql')`` or an explicit
+    ``is defined`` guard instead.
+    """
+    tasks_dir = ROOT_DIR / "roles" / role / "tasks"
+    warnings = []
+    paths = list(tasks_dir.rglob("*.yml"))
+    handlers_dir = ROOT_DIR / "roles" / role / "handlers"
+    if handlers_dir.is_dir():
+        paths.extend(handlers_dir.rglob("*.yml"))
+    for path in sorted(paths):
+        try:
+            text = path.read_text(encoding="utf-8")
+            tasks = load_task_file(path, text)
+        except (OSError, UnicodeDecodeError, yaml.YAMLError):
+            continue
+        for task, _ in walk_tasks(tasks):
+            line = task.get("__line__")
+            conditions: list[str] = []
+            for key in ("when", "failed_when", "changed_when", "until"):
+                conditions.extend(condition_texts(task.get(key)))
+            for module, args in task_modules(task):
+                if module.rsplit(".", 1)[-1] == "assert" and isinstance(args, dict):
+                    conditions.extend(condition_texts(args.get("that")))
+            for condition in conditions:
+                for match in STATE_MARKER.finditer(condition):
+                    marker = match.group(1)
+                    if SAFE_STATE_MARKER.match(condition[match.end() :]):
+                        continue
+                    if condition[: match.start()].rstrip().endswith("default("):
+                        continue
+                    warnings.append(
+                        format_lifecycle_warning(
+                            path,
+                            line,
+                            task,
+                            f"uses bare '{marker}'; use "
+                            f"lookup('installed', '{marker}') or guard with "
+                            f"'is defined'",
+                        )
+                    )
+    return warnings
+
+
 def prepare_controller_files(scenario: Path) -> None:
     template_roles = scenario / "templates" / "roles"
     template_roles.parent.mkdir(parents=True, exist_ok=True)
@@ -1353,6 +1421,7 @@ def run_ansible(
             "ANSIBLE_LIBRARY": str(library),
             "ANSIBLE_COLLECTIONS_PATH": str(library.parent / "collections"),
             "ANSIBLE_ACTION_PLUGINS": str(library.parent / "actions"),
+            "ANSIBLE_LOOKUP_PLUGINS": str(ROOT_DIR / "lookup_plugins"),
             "ANSIBLE_NOCOLOR": "1",
             "IIAB_MOCK_STATE": str(state_file),
         }
@@ -1640,6 +1709,11 @@ def run_role(role: str, vars_file: str, quiet: bool = False) -> int:
         print(f"  lifecycle warnings: {len(warnings)}")
         for warning in warnings:
             print(warning, end="")
+    unsafe_state = unsafe_state_warnings(role)
+    if unsafe_state:
+        print(f"  unsafe state checks: {len(unsafe_state)}")
+        for warning in unsafe_state:
+            print(warning, end="")
     if not quiet:
         for name in skipped:
             print(f"  {name:<19} SKIP (unsupported)")
@@ -1690,7 +1764,7 @@ def run_role(role: str, vars_file: str, quiet: bool = False) -> int:
                     print(output, end="")
                 if " FAIL\n" in output or output.endswith("FAIL\n"):
                     failures = 1
-    return failures
+    return failures or int(bool(unsafe_state))
 
 
 def parse_shard(value: str) -> tuple[int, int]:

@@ -43,13 +43,13 @@
     state: started
   when:
     - not is_proot
-    - mysql_installed is defined
+    - lookup('installed', 'mysql')
 
 - name: Start MariaDB via pdsm before removing the Matomo database (proot)
   command: pdsm start mariadb
   when:
     - is_proot
-    - mysql_installed is defined
+    - lookup('installed', 'mysql')
 
 - name: Remove the Matomo database
   ansible.mariadb.mariadb_db:
@@ -57,7 +57,7 @@
     state: absent
   when:
     - not is_proot
-    - mysql_installed is defined
+    - lookup('installed', 'mysql')
 
 - name: Remove the Matomo database user
   ansible.mariadb.mariadb_user:
@@ -65,12 +65,12 @@
     state: absent
   when:
     - not is_proot
-    - mysql_installed is defined
+    - lookup('installed', 'mysql')
 
 - name: Remove the Matomo database and user (proot)
   when:
     - is_proot
-    - mysql_installed is defined
+    - lookup('installed', 'mysql')
   block:
 
     - name: Remove the Matomo database (proot)
