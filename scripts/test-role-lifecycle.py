@@ -1611,7 +1611,20 @@ def toggle_result(
     }
     managed = active & toggle_services - BASELINE_SERVICES
     if not managed:
-        output.append("SKIP (role created no systemd service)\n")
+        # A role can toggle a config file instead of owning a daemon (e.g.,
+        # AWStats' NGINX shortcut). Both phases are already installed, so any
+        # path difference between them comes from the enabled state.
+        disabled_paths = set(snapshots["disabled"].get("paths", {}))
+        enabled_paths = set(snapshots["enabled-again"].get("paths", {}))
+        added = enabled_paths - disabled_paths
+        removed = disabled_paths - enabled_paths
+        if added or removed:
+            output.append(
+                f"PASS (config-only toggle: {len(added)} added, "
+                f"{len(removed)} removed)\n"
+            )
+            return "".join(output)
+        output.append("SKIP (role created no systemd service or config change)\n")
         return "".join(output)
     if missing := managed - stopped:
         output.append(f"FAIL\nservices not stopped when disabled: {sorted(missing)}\n")

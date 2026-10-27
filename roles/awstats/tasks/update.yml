@@ -1,8 +1,8 @@
 ---
-# Network phase. main.yml includes this only on first install, so an ordinary
-# apply never refreshes package metadata or fetches anything.
+# Network phase. main.yml includes this on first install, --upgrade, or
+# --force-reinstall, so an ordinary apply never refreshes package metadata.
 
-- name: Install awstats package
+- name: Install or upgrade the awstats package
   package:
     name: awstats
-    state: present
+    state: "{{ 'latest' if upgrade else 'present' }}"

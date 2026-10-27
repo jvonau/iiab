@@ -1,0 +1,21 @@
+---
+# Enable or disable the AWStats NGINX shortcut. AWStats itself is CGI, so the
+# role has no daemon of its own; NGINX is the service that serves it.
+
+- name: Enable http://box/awstats via NGINX, by installing {{ nginx_conf_dir }}/awstats-nginx.conf from template
+  template:
+    src: awstats-nginx.conf
+    dest: "{{ nginx_conf_dir }}/"    # /etc/nginx/conf.d
+  notify:
+    - Restart nginx
+    - Restart nginx via pdsm
+  when: awstats_enabled
+
+- name: Disable http://box/awstats via NGINX, by removing {{ nginx_conf_dir }}/awstats-nginx.conf
+  file:
+    path: "{{ nginx_conf_dir }}/awstats-nginx.conf"    # /etc/nginx/conf.d
+    state: absent
+  notify:
+    - Restart nginx
+    - Restart nginx via pdsm
+  when: not awstats_enabled

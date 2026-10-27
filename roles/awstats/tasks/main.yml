@@ -2,9 +2,11 @@
 # Entry point. This file only validates and dispatches to the lifecycle task
 # files; see "Role task lifecycle" in the top-level README.md.
 #
-#   update.yml     the only phase that installs the package
+#   update.yml     the only phase that installs or upgrades the package
 #   install.yml    offline-safe install/repair
-#   configure.yml  always runs; configuration and the NGINX shortcut
+#   configure.yml  always runs; configuration and the CGI helper
+#   enable-or-disable.yml  NGINX shortcut on/off
+#   reinstall.yml  local preparation for --reinstall / --force-reinstall
 #   uninstall.yml  cleanup for --uninstall
 #   state.yml      records the reported settings in iiab.ini
 
@@ -21,15 +23,22 @@
 
     - block:
 
-        - name: Install the AWStats package
+        - name: Prepare an existing AWStats install for reinstall
+          include_tasks: reinstall.yml
+          when: reinstall or force_reinstall
+
+        - name: Install or upgrade the AWStats package
           include_tasks: update.yml
-          when: awstats_installed is undefined
+          when: awstats_installed is undefined or upgrade or force_reinstall
 
         - name: Install or repair AWStats
           include_tasks: install.yml
 
         - name: Apply AWStats configuration
           include_tasks: configure.yml
+
+        - name: Enable or disable the AWStats NGINX shortcut
+          include_tasks: enable-or-disable.yml
 
         - name: Record AWStats state
           include_tasks: state.yml

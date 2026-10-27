@@ -1,0 +1,32 @@
+---
+# Local preparation for --reinstall and --force-reinstall. Never fetches
+# anything; update.yml, install.yml, and configure.yml rebuild what is removed.
+
+- name: Remove AWStats configuration for a reinstall
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "{{ nginx_conf_dir }}/awstats-nginx.conf"
+    - /etc/awstats/awstats.conf
+    - /etc/awstats/awstats.schoolserver.conf
+    - /usr/lib/cgi-bin/awstats/awstats.pl
+  notify:
+    - Restart nginx
+    - Restart nginx via pdsm
+
+- name: Remove AWStats data for --force-reinstall
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "{{ awstats_data_dir }}"
+    - /usr/lib/cgi-bin/awstats
+    - /etc/awstats
+  when: force_reinstall
+
+- name: Remove the awstats package for --force-reinstall
+  package:
+    name: awstats
+    state: absent
+  when: force_reinstall
